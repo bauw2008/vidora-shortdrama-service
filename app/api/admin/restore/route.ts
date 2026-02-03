@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const table = formData.get('table') as string;
+    const clearBeforeRestore = formData.get('clearBeforeRestore') === 'true';
 
     if (!file) {
       return NextResponse.json(
@@ -40,7 +41,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const lines = fileContent.split('\n').filter(line => line.trim());
+    // 去除所有回车符，统一使用换行符分隔
+    const normalizedContent = fileContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = normalizedContent.split('\n').filter(line => line.trim());
     if (lines.length < 2) {
       return NextResponse.json(
         { success: false, error: 'CSV 文件为空或格式错误' },
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
 
     // 解析 CSV 表头
     const headers = parseCSVLine(lines[0]);
-    const rows: any[] = [];
+    let rows: any[] = [];
 
     // 解析每一行数据
     for (let i = 1; i < lines.length; i++) {
@@ -101,6 +104,38 @@ export async function POST(request: Request) {
         conflictColumn = 'id';
     }
 
+    // 如果是 videos 表，移除 id 字段（如果存在）
+    if (table === 'videos') {
+      rows = rows.map((row) => {
+        const { id, ...rest } = row;
+        return rest;
+      });
+    }
+
+    // 如果需要，先清空表数据
+    if (clearBeforeRestore) {
+      const deleteQuery = supabase.from(table).delete();
+      
+      // RLS 要求必须有 WHERE 条件，使用不存在的值
+      if (table === 'videos') {
+        deleteQuery.neq('vod_id', -1);
+      } else if (table === 'sub_categories') {
+        deleteQuery.neq('id', -1);
+      } else {
+        deleteQuery.neq('id', -1);
+      }
+      
+      const { error: deleteError } = await deleteQuery;
+
+      if (deleteError) {
+        console.error(`清空表 ${table} 失败:`, deleteError);
+        return NextResponse.json(
+          { success: false, error: `清空表 ${table} 失败: ${deleteError.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
     // 批量插入
     const BATCH_SIZE = 100;
     let inserted = 0;
@@ -128,6 +163,7 @@ export async function POST(request: Request) {
         inserted,
         failed,
         total: rows.length,
+        cleared: clearBeforeRestore,
       },
     });
   } catch (error) {

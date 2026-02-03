@@ -58,7 +58,6 @@ export interface ApiFieldConfig {
 }
 
 export interface VideoData {
-  id?: number;
   vod_id: number;
   name: string;
   category_id: number | null;

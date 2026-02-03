@@ -36,8 +36,7 @@ CREATE TABLE IF NOT EXISTS sub_categories (
 
 -- 视频表
 CREATE TABLE IF NOT EXISTS videos (
-  id SERIAL PRIMARY KEY,
-  vod_id INTEGER UNIQUE NOT NULL,
+  vod_id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
   sub_category_id INTEGER REFERENCES sub_categories(id) ON DELETE SET NULL,
@@ -184,7 +183,6 @@ CREATE TABLE IF NOT EXISTS api_logs (
 
 CREATE INDEX IF NOT EXISTS idx_videos_category ON videos(category_id);
 CREATE INDEX IF NOT EXISTS idx_videos_sub_category ON videos(sub_category_id);
-CREATE INDEX IF NOT EXISTS idx_videos_vod_id ON videos(vod_id);
 CREATE INDEX IF NOT EXISTS idx_videos_synced_at ON videos(synced_at DESC);
 
 -- 全文搜索索引（中文支持）
@@ -336,9 +334,6 @@ CREATE POLICY "Public read ip_blacklist" ON ip_blacklist
   FOR SELECT USING (true);
 
 CREATE POLICY "Public read api_logs" ON api_logs
-  FOR SELECT USING (true);
-
-CREATE POLICY "Public read api_config" ON api_config
   FOR SELECT USING (true);
 
 -- 写入策略（需要通过 API Key 验证，这里暂时允许所有写入，实际应用中应该更严格）

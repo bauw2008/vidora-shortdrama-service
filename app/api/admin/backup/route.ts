@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         data = subCategoriesResult.data || [];
         break;
       case 'videos':
-        headers = ['id', 'vod_id', 'name', 'category_id', 'sub_category_id', 'tags', 'episode_count', 'cover', 'description', 'play_urls', 'actor', 'director', 'writer', 'area', 'lang', 'year', 'remarks', 'hits', 'hits_day', 'hits_week', 'hits_month', 'up', 'down', 'score', 'score_num', 'updated_at', 'added_at', 'synced_at'];
+        headers = ['vod_id', 'name', 'category_id', 'sub_category_id', 'tags', 'episode_count', 'cover', 'description', 'play_urls', 'actor', 'director', 'writer', 'area', 'lang', 'year', 'remarks', 'hits', 'hits_day', 'hits_week', 'hits_month', 'up', 'down', 'score', 'score_num', 'updated_at', 'added_at', 'synced_at'];
         const videosResult = await supabase.from('videos').select('*').order('vod_id');
         data = videosResult.data || [];
         break;

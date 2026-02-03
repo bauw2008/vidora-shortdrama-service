@@ -19,6 +19,7 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
   const [restoring, setRestoring] = useState(false);
   const [restoreResult, setRestoreResult] = useState<any>(null);
   const [selectedTable, setSelectedTable] = useState('videos');
+  const [clearBeforeRestore, setClearBeforeRestore] = useState(false);
 
   const tables = [
     { id: 'categories', name: '一级分类', icon: '📁' },
@@ -92,6 +93,9 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('table', table);
+      if (clearBeforeRestore) {
+        formData.append('clearBeforeRestore', 'true');
+      }
 
       const res = await fetch('/api/admin/restore', {
         method: 'POST',
@@ -135,6 +139,19 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
         </header>
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* 恢复顺序警告 */}
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="text-sm font-bold text-red-900 mb-2">
+              📋 必须按照以下顺序恢复（有外键依赖关系）
+            </h3>
+            <ol className="text-sm text-red-800 space-y-1 list-decimal list-inside">
+              <li className="font-medium">第一步：恢复 <strong>categories</strong>（一级分类）</li>
+              <li className="font-medium">第二步：恢复 <strong>sub_categories</strong>（二级分类，依赖 categories）</li>
+              <li className="font-medium">第三步：恢复 <strong>videos</strong>（视频数据，依赖 sub_categories）</li>
+            </ol>
+            <p className="text-xs text-red-700 mt-2">⚠️ 如果顺序错误会报外键约束错误</p>
+          </div>
+
           <div className="mb-8">
             <p className="text-gray-600">
               单表 CSV 备份和恢复
@@ -186,7 +203,8 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
                   </option>
                 ))}
               </select>
-              <label className="block">
+
+              <label className="block mb-4">
                 <input
                   type="file"
                   accept=".csv"
@@ -200,6 +218,18 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
                     hover:file:bg-green-100
                     disabled:opacity-50 disabled:cursor-not-allowed"
                 />
+              </label>
+
+              <label className="flex items-center mb-4">
+                <input
+                  type="checkbox"
+                  checked={clearBeforeRestore}
+                  onChange={(e) => setClearBeforeRestore(e.target.checked)}
+                  className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">
+                  恢复前清空表数据（⚠️ 将删除所有现有数据）
+                </span>
               </label>
             </div>
           </div>
@@ -224,6 +254,7 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
               </div>
               <div className="mt-2 text-sm text-gray-500">
                 总计: {restoreResult.total} 条记录
+                {restoreResult.cleared && <span className="ml-2 text-red-600 font-medium">（已清空旧数据）</span>}
               </div>
             </div>
           )}
@@ -236,6 +267,7 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
               <li>CSV 格式：一行一条记录，适合大数据量</li>
               <li>恢复操作使用 upsert，已存在的记录会被覆盖</li>
               <li>建议定期备份，防止数据丢失</li>
+              <li className="font-semibold mt-2">恢复顺序：请先恢复 categories 和 sub_categories，再恢复 videos（videos 依赖 sub_categories）</li>
             </ul>
           </div>
         </main>
