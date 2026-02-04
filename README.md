@@ -4,7 +4,7 @@
 
 ## 特性
 
-- 🎬 完整的短剧视频数据同步（26915+ 视频）
+- 🎬 完整的短剧视频数据同步
 - 🗄️ 使用 Supabase PostgreSQL 存储（免费额度 500MB）
 - 🚀 EdgeOne Functions 部署
 - 🔄 支持完整同步和增量同步
@@ -33,7 +33,7 @@ pnpm install
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-API_SOURCE_URL=https://api.wwzy.tv/api.php/provide/vod/
+API_SOURCE_URL=https://api/api.php/provide/vod/
 ADMIN_API_KEY=your-secret-api-key
 ```
 
@@ -177,7 +177,7 @@ vidora-shortdrama-service/
 
 ## 成本估算
 
-- **Supabase**：免费额度（500MB 存储，足够 26915 条视频）
+- **Supabase**：免费额度（500MB 存储）
 - **EdgeOne**：按实际使用量计费
 - **总计**：可完全在免费额度内运行
 

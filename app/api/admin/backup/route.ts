@@ -26,46 +26,91 @@ export async function GET(request: Request) {
     let data: any[] = [];
     let headers: string[] = [];
 
+    // 分页获取所有数据的函数
+    const fetchAllData = async (tableName: string, orderBy: string = 'id', ascending: boolean = true, limitCount: number | null = null) => {
+      const pageSize = 1000;
+      let allData: any[] = [];
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+
+        let query = supabase
+          .from(tableName)
+          .select('*')
+          .order(orderBy, { ascending })
+          .range(from, to);
+
+        if (limitCount && allData.length >= limitCount) {
+          break;
+        }
+
+        const result = await query;
+        if (result.data && result.data.length > 0) {
+          allData = allData.concat(result.data);
+          page++;
+          // 如果返回的数据少于 pageSize，说明没有更多数据了
+          hasMore = result.data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allData;
+    };
+
     switch (table) {
       case 'categories':
-        headers = ['id', 'name', 'sort', 'is_active', 'created_at'];
-        const categoriesResult = await supabase.from('categories').select('*').order('id');
-        data = categoriesResult.data || [];
+        data = await fetchAllData('categories', 'id');
+        // 使用第一条数据的键作为表头（确保顺序正确）
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       case 'sub_categories':
-        headers = ['id', 'name', 'category_id', 'created_at'];
-        const subCategoriesResult = await supabase.from('sub_categories').select('*').order('id');
-        data = subCategoriesResult.data || [];
+        data = await fetchAllData('sub_categories', 'id');
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       case 'videos':
-        headers = ['vod_id', 'name', 'category_id', 'sub_category_id', 'tags', 'episode_count', 'cover', 'description', 'play_urls', 'actor', 'director', 'writer', 'area', 'lang', 'year', 'remarks', 'hits', 'hits_day', 'hits_week', 'hits_month', 'up', 'down', 'score', 'score_num', 'updated_at', 'added_at', 'synced_at'];
-        const videosResult = await supabase.from('videos').select('*').order('vod_id');
-        data = videosResult.data || [];
+        data = await fetchAllData('videos', 'vod_id');
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       case 'api_sources':
-        headers = ['id', 'name', 'url', 'is_active', 'created_at', 'updated_at'];
-        const apiSourcesResult = await supabase.from('api_sources').select('*');
-        data = apiSourcesResult.data || [];
+        data = await fetchAllData('api_sources', 'id');
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       case 'sync_schedules':
-        headers = ['id', 'name', 'hour', 'minute', 'is_active', 'last_run_time', 'next_run_time', 'created_at', 'updated_at'];
-        const syncSchedulesResult = await supabase.from('sync_schedules').select('*').order('id');
-        data = syncSchedulesResult.data || [];
+        data = await fetchAllData('sync_schedules', 'id');
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       case 'api_config':
-        headers = ['id', 'api_key', 'auth_enabled', 'rate_limit_hourly', 'rate_limit_daily', 'updated_at'];
-        const apiConfigResult = await supabase.from('api_config').select('*').order('id');
-        data = apiConfigResult.data || [];
+        data = await fetchAllData('api_config', 'id');
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       case 'ip_blacklist':
-        headers = ['id', 'ip_address', 'reason', 'created_at'];
-        const ipBlacklistResult = await supabase.from('ip_blacklist').select('*').order('id');
-        data = ipBlacklistResult.data || [];
+        data = await fetchAllData('ip_blacklist', 'id');
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       case 'api_logs':
-        headers = ['id', 'ip_address', 'api_endpoint', 'http_method', 'request_params', 'response_status', 'auth_validated', 'error_message', 'request_time', 'user_agent'];
-        const apiLogsResult = await supabase.from('api_logs').select('*').order('request_time', { ascending: false }).limit(10000);
-        data = apiLogsResult.data || [];
+        // API 日志限制最近 50000 条
+        data = await fetchAllData('api_logs', 'request_time', false, 50000);
+        if (data.length > 0) {
+          headers = Object.keys(data[0]);
+        }
         break;
       default:
         return NextResponse.json(

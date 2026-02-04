@@ -23,6 +23,7 @@ export default function SyncSchedulesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<SyncSchedule | null>(null);
   const [formData, setFormData] = useState({ name: '', hour: 2, minute: 0 });
+  const [generatedSecret, setGeneratedSecret] = useState<string | null>(null);
 
   const fetchSchedules = async () => {
     try {
@@ -146,6 +147,27 @@ export default function SyncSchedulesPage() {
     }
   };
 
+  const handleGenerateCronSecret = async () => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch('/api/admin/generate-cron-secret', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedSecret(data.secret);
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error('生成密钥失败:', error);
+      alert('生成密钥失败');
+    }
+  };
+
   const handleToggleActive = async (schedule: SyncSchedule) => {
     try {
       const token = localStorage.getItem('admin_token');
@@ -209,7 +231,7 @@ export default function SyncSchedulesPage() {
         </header>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
+          <div className="mb-6 flex space-x-3">
             <button
               onClick={() => {
                 setShowAddModal(true);
@@ -219,6 +241,12 @@ export default function SyncSchedulesPage() {
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               添加定时同步
+            </button>
+            <button
+              onClick={handleGenerateCronSecret}
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+            >
+              生成 CRON_SECRET
             </button>
           </div>
 
@@ -380,6 +408,57 @@ export default function SyncSchedulesPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* CRON_SECRET 显示弹窗 */}
+        {generatedSecret && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-lg font-medium text-gray-900">
+                  已生成 CRON_SECRET
+                </h3>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  请复制以下密钥，然后在 GitHub 仓库的 Secrets 中配置：
+                </p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CRON_SECRET
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={generatedSecret}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    配置步骤
+                  </label>
+                  <ol className="list-decimal list-inside text-sm text-gray-600 space-y-1">
+                    <li>进入 GitHub 仓库设置</li>
+                    <li>Settings → Secrets and variables → Actions</li>
+                    <li>点击 "New repository secret"</li>
+                    <li>Name: <code className="bg-gray-100 px-1 rounded">CRON_SECRET</code></li>
+                    <li>Value: 粘贴上面的密钥</li>
+                    <li>点击 Add secret</li>
+                  </ol>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
+                <button
+                  onClick={() => setGeneratedSecret(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  关闭
+                </button>
+              </div>
             </div>
           </div>
         )}
