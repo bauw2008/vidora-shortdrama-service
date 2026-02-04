@@ -13,7 +13,7 @@ export async function GET() {
           status: 'unhealthy',
           error: '数据库连接失败',
         },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -29,7 +29,7 @@ export async function GET() {
         status: 'unhealthy',
         error: error instanceof Error ? error.message : '未知错误',
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 }

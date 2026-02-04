@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         success: false,
         error: '重置同步状态失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

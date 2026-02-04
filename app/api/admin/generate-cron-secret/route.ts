@@ -8,13 +8,13 @@ export async function GET(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // 生成一个安全的随机密钥（32字节，转换为十六进制字符串）
     const secret = randomBytes(32).toString('hex');
-    
+
     return NextResponse.json({
       success: true,
       secret: secret,
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         success: false,
         error: '生成密钥失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -21,7 +21,9 @@ export default function SyncSchedulesPage() {
   const [schedules, setSchedules] = useState<SyncSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<SyncSchedule | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<SyncSchedule | null>(
+    null,
+  );
   const [formData, setFormData] = useState({ name: '', hour: 2, minute: 0 });
   const [generatedSecret, setGeneratedSecret] = useState<string | null>(null);
 
@@ -95,7 +97,11 @@ export default function SyncSchedulesPage() {
 
   const handleEdit = (schedule: SyncSchedule) => {
     setEditingSchedule(schedule);
-    setFormData({ name: schedule.name, hour: schedule.hour, minute: schedule.minute });
+    setFormData({
+      name: schedule.name,
+      hour: schedule.hour,
+      minute: schedule.minute,
+    });
     setShowAddModal(true);
   };
 
@@ -124,7 +130,12 @@ export default function SyncSchedulesPage() {
   };
 
   const handleInitDefault = async () => {
-    if (!confirm('确定要初始化默认定时同步配置吗？\n\n这将添加：\n- 凌晨增量同步（2:00）\n- 早晨增量同步（6:00）')) return;
+    if (
+      !confirm(
+        '确定要初始化默认定时同步配置吗？\n\n这将添加：\n- 凌晨增量同步（2:00）\n- 早晨增量同步（6:00）',
+      )
+    )
+      return;
 
     try {
       const token = localStorage.getItem('admin_token');
@@ -206,8 +217,8 @@ export default function SyncSchedulesPage() {
   if (loading) {
     return (
       <AuthGuard>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-gray-500">加载中...</div>
+        <div className='flex items-center justify-center min-h-screen'>
+          <div className='text-gray-500'>加载中...</div>
         </div>
       </AuthGuard>
     );
@@ -215,75 +226,75 @@ export default function SyncSchedulesPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className='min-h-screen bg-gray-50'>
+        <header className='bg-white shadow'>
+          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
             <button
               onClick={() => router.push('/admin')}
-              className="text-indigo-600 hover:text-indigo-700"
+              className='text-indigo-600 hover:text-indigo-700'
             >
               ← 返回
             </button>
-            <h1 className="text-2xl font-bold text-gray-900 mt-2">
+            <h1 className='text-2xl font-bold text-gray-900 mt-2'>
               定时同步配置
             </h1>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6 flex space-x-3">
+        <main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
+          <div className='mb-6 flex space-x-3'>
             <button
               onClick={() => {
                 setShowAddModal(true);
                 setEditingSchedule(null);
                 setFormData({ name: '', hour: 2, minute: 0 });
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700'
             >
               添加定时同步
             </button>
             <button
               onClick={handleGenerateCronSecret}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+              className='px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700'
             >
               生成 CRON_SECRET
             </button>
           </div>
 
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className='bg-white shadow rounded-lg overflow-hidden'>
+            <table className='min-w-full divide-y divide-gray-200'>
+              <thead className='bg-gray-50'>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                     名称
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                     执行时间
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                     状态
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                     上次运行
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                     下次运行
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                     操作
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className='bg-white divide-y divide-gray-200'>
                 {schedules.map((schedule) => (
                   <tr key={schedule.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
                       {schedule.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
                       {formatTime(schedule.hour, schedule.minute)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
                       <button
                         onClick={() => handleToggleActive(schedule)}
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -295,22 +306,22 @@ export default function SyncSchedulesPage() {
                         {schedule.is_active ? '已启用' : '已禁用'}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
                       {formatDateTime(schedule.last_run_time)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
                       {formatDateTime(schedule.next_run_time)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className='px-6 py-4 whitespace-nowrap text-sm font-medium'>
                       <button
                         onClick={() => handleEdit(schedule)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        className='text-blue-600 hover:text-blue-900 mr-3'
                       >
                         编辑
                       </button>
                       <button
                         onClick={() => handleDelete(schedule.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className='text-red-600 hover:text-red-900'
                       >
                         删除
                       </button>
@@ -319,11 +330,13 @@ export default function SyncSchedulesPage() {
                 ))}
                 {schedules.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center">
-                      <p className="text-sm text-gray-500 mb-4">暂无定时同步配置</p>
+                    <td colSpan={6} className='px-6 py-8 text-center'>
+                      <p className='text-sm text-gray-500 mb-4'>
+                        暂无定时同步配置
+                      </p>
                       <button
                         onClick={handleInitDefault}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                        className='px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm'
                       >
                         初始化默认配置（凌晨2:00 + 早晨6:00）
                       </button>
@@ -337,72 +350,84 @@ export default function SyncSchedulesPage() {
 
         {/* 添加/编辑模态框 */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+            <div className='bg-white rounded-lg shadow-xl max-w-md w-full mx-4'>
+              <div className='px-6 py-4 border-b'>
+                <h3 className='text-lg font-medium text-gray-900'>
                   {editingSchedule ? '编辑定时同步' : '添加定时同步'}
                 </h3>
               </div>
-              <form onSubmit={handleSubmit} className="px-6 py-4">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+              <form onSubmit={handleSubmit} className='px-6 py-4'>
+                <div className='mb-4'>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     名称
                   </label>
                   <input
-                    type="text"
+                    type='text'
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="例如：凌晨增量同步"
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    placeholder='例如：凌晨增量同步'
                     required
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className='mb-4'>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     执行时间（小时）
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    max="23"
+                    type='number'
+                    min='0'
+                    max='23'
                     value={formData.hour}
-                    onChange={(e) => setFormData({ ...formData, hour: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        hour: parseInt(e.target.value),
+                      })
+                    }
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                     required
                   />
-                  <p className="mt-1 text-xs text-gray-500">0-23</p>
+                  <p className='mt-1 text-xs text-gray-500'>0-23</p>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className='mb-4'>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     执行时间（分钟）
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    max="59"
+                    type='number'
+                    min='0'
+                    max='59'
                     value={formData.minute}
-                    onChange={(e) => setFormData({ ...formData, minute: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        minute: parseInt(e.target.value),
+                      })
+                    }
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                     required
                   />
-                  <p className="mt-1 text-xs text-gray-500">0-59</p>
+                  <p className='mt-1 text-xs text-gray-500'>0-59</p>
                 </div>
-                <div className="flex justify-end space-x-3">
+                <div className='flex justify-end space-x-3'>
                   <button
-                    type="button"
+                    type='button'
                     onClick={() => {
                       setShowAddModal(false);
                       setEditingSchedule(null);
                       setFormData({ name: '', hour: 2, minute: 0 });
                     }}
-                    className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    className='px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200'
                   >
                     取消
                   </button>
                   <button
-                    type="submit"
-                    className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    type='submit'
+                    className='px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700'
                   >
                     {editingSchedule ? '更新' : '添加'}
                   </button>
@@ -414,47 +439,52 @@ export default function SyncSchedulesPage() {
 
         {/* CRON_SECRET 显示弹窗 */}
         {generatedSecret && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+            <div className='bg-white rounded-lg shadow-xl max-w-lg w-full mx-4'>
+              <div className='px-6 py-4 border-b'>
+                <h3 className='text-lg font-medium text-gray-900'>
                   已生成 CRON_SECRET
                 </h3>
               </div>
-              <div className="px-6 py-4">
-                <p className="text-sm text-gray-600 mb-4">
+              <div className='px-6 py-4'>
+                <p className='text-sm text-gray-600 mb-4'>
                   请复制以下密钥，然后在 GitHub 仓库的 Secrets 中配置：
                 </p>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className='mb-4'>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     CRON_SECRET
                   </label>
                   <input
-                    type="text"
+                    type='text'
                     readOnly
                     value={generatedSecret}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm"
+                    className='w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm'
                     onClick={(e) => (e.target as HTMLInputElement).select()}
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className='mb-4'>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     配置步骤
                   </label>
-                  <ol className="list-decimal list-inside text-sm text-gray-600 space-y-1">
+                  <ol className='list-decimal list-inside text-sm text-gray-600 space-y-1'>
                     <li>进入 GitHub 仓库设置</li>
                     <li>Settings → Secrets and variables → Actions</li>
                     <li>点击 "New repository secret"</li>
-                    <li>Name: <code className="bg-gray-100 px-1 rounded">CRON_SECRET</code></li>
+                    <li>
+                      Name:{' '}
+                      <code className='bg-gray-100 px-1 rounded'>
+                        CRON_SECRET
+                      </code>
+                    </li>
                     <li>Value: 粘贴上面的密钥</li>
                     <li>点击 Add secret</li>
                   </ol>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
+              <div className='px-6 py-4 border-t bg-gray-50 flex justify-end'>
                 <button
                   onClick={() => setGeneratedSecret(null)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700'
                 >
                   关闭
                 </button>

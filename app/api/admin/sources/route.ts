@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         success: false,
         error: '获取 API 源失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     if (!name || !url) {
       return NextResponse.json(
         { success: false, error: '缺少必要参数' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         success: false,
         error: '创建 API 源失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -82,7 +82,7 @@ export async function DELETE(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -92,7 +92,7 @@ export async function DELETE(request: Request) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: '缺少 API 源 ID' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -109,7 +109,7 @@ export async function DELETE(request: Request) {
         success: false,
         error: '删除 API 源失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

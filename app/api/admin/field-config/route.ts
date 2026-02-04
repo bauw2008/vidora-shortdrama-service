@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   if (!verifyAuth(request)) {
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -17,8 +17,11 @@ export async function GET(request: Request) {
 
     if (!apiEndpoint || (apiEndpoint !== 'list' && apiEndpoint !== 'detail')) {
       return NextResponse.json(
-        { success: false, error: 'apiEndpoint 参数无效，必须是 list 或 detail' },
-        { status: 400 }
+        {
+          success: false,
+          error: 'apiEndpoint 参数无效，必须是 list 或 detail',
+        },
+        { status: 400 },
       );
     }
 
@@ -35,7 +38,7 @@ export async function GET(request: Request) {
         success: false,
         error: '获取字段配置失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -45,7 +48,7 @@ export async function PUT(request: Request) {
   if (!verifyAuth(request)) {
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -56,7 +59,7 @@ export async function PUT(request: Request) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: '缺少 id 参数' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -77,7 +80,7 @@ export async function PUT(request: Request) {
         success: false,
         error: '更新字段配置失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

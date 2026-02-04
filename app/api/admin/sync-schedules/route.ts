@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         success: false,
         error: `获取定时同步配置失败: ${error instanceof Error ? error.message : '未知错误'}`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -51,14 +51,14 @@ export async function POST(request: Request) {
     if (!name || hour === undefined || minute === undefined) {
       return NextResponse.json(
         { success: false, error: '缺少必要参数: name, hour, minute' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
       return NextResponse.json(
         { success: false, error: '时间参数无效: hour (0-23), minute (0-59)' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         success: false,
         error: `创建定时同步配置失败: ${error instanceof Error ? error.message : '未知错误'}`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -87,7 +87,7 @@ export async function PUT(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -97,14 +97,14 @@ export async function PUT(request: Request) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: '缺少必要参数: id' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { success: false, error: '没有要更新的字段' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -112,14 +112,17 @@ export async function PUT(request: Request) {
     if (updates.hour !== undefined && (updates.hour < 0 || updates.hour > 23)) {
       return NextResponse.json(
         { success: false, error: 'hour 参数无效: 0-23' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    if (updates.minute !== undefined && (updates.minute < 0 || updates.minute > 59)) {
+    if (
+      updates.minute !== undefined &&
+      (updates.minute < 0 || updates.minute > 59)
+    ) {
       return NextResponse.json(
         { success: false, error: 'minute 参数无效: 0-59' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -137,7 +140,7 @@ export async function PUT(request: Request) {
         success: false,
         error: `更新定时同步配置失败: ${error instanceof Error ? error.message : '未知错误'}`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -148,7 +151,7 @@ export async function DELETE(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -158,7 +161,7 @@ export async function DELETE(request: Request) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: '缺少必要参数: id' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -175,7 +178,7 @@ export async function DELETE(request: Request) {
         success: false,
         error: `删除定时同步配置失败: ${error instanceof Error ? error.message : '未知错误'}`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

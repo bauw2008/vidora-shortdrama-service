@@ -60,19 +60,19 @@ class ApiClient {
   }
 
   // 限流：确保请求间隔不小于最小值（添加随机抖动）
-private async rateLimit(): Promise<void> {
-  const now = Date.now();
-  const elapsed = now - this.lastRequestTime;
+  private async rateLimit(): Promise<void> {
+    const now = Date.now();
+    const elapsed = now - this.lastRequestTime;
 
-  if (elapsed < this.minRequestInterval) {
-    const waitTime = this.minRequestInterval - elapsed;
-    // 添加随机抖动（0-200ms）使请求更自然
-    const jitter = Math.random() * 200;
-    await new Promise((resolve) => setTimeout(resolve, waitTime + jitter));
+    if (elapsed < this.minRequestInterval) {
+      const waitTime = this.minRequestInterval - elapsed;
+      // 添加随机抖动（0-200ms）使请求更自然
+      const jitter = Math.random() * 200;
+      await new Promise((resolve) => setTimeout(resolve, waitTime + jitter));
+    }
+
+    this.lastRequestTime = Date.now();
   }
-
-  this.lastRequestTime = Date.now();
-}
 
   // 获取 API URL（优先从数据库读取）
   private async getApiUrl(): Promise<string> {
@@ -87,7 +87,9 @@ private async rateLimit(): Promise<void> {
       if (activeSource) {
         this.apiUrl = activeSource.url;
         this.cachedApiUrl = activeSource.url;
-        console.log(`[API] 使用数据库配置的 API 源: ${activeSource.name} (${activeSource.url})`);
+        console.log(
+          `[API] 使用数据库配置的 API 源: ${activeSource.name} (${activeSource.url})`,
+        );
         return this.apiUrl;
       }
     } catch (error) {
@@ -113,13 +115,13 @@ private async rateLimit(): Promise<void> {
         timeout: TIMEOUT,
         headers: {
           'User-Agent': this.getRandomUserAgent(),
-          'Accept': 'application/json, text/plain, */*',
+          Accept: 'application/json, text/plain, */*',
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
-          'Connection': 'keep-alive',
-          'Referer': 'https://api.wwzy.tv/',
+          Connection: 'keep-alive',
+          Referer: 'https://api.wwzy.tv/',
           'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
+          Pragma: 'no-cache',
           'Sec-Fetch-Dest': 'empty',
           'Sec-Fetch-Mode': 'cors',
           'Sec-Fetch-Site': 'same-site',
@@ -131,7 +133,7 @@ private async rateLimit(): Promise<void> {
       const axiosError = error as AxiosError;
       if (axiosError.response) {
         throw new Error(
-          `API 请求失败: ${axiosError.response.status} - ${axiosError.response.statusText}`
+          `API 请求失败: ${axiosError.response.status} - ${axiosError.response.statusText}`,
         );
       } else if (axiosError.request) {
         throw new Error(`API 请求超时或网络错误: ${axiosError.message}`);
@@ -169,7 +171,7 @@ private async rateLimit(): Promise<void> {
   async getList(
     page: number = 1,
     size: number = 20,
-    categoryId?: number
+    categoryId?: number,
   ): Promise<ApiListResponse> {
     const apiUrl = await this.getApiUrl();
     const params = new URLSearchParams({

@@ -6,7 +6,7 @@ import { logApiCall, getRequestParams, getUserAgent } from '@/lib/api-logger';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string; episode: string }> }
+  { params }: { params: Promise<{ id: string; episode: string }> },
 ) {
   const { id, episode } = await params;
   const clientIp = getClientIp(request);
@@ -29,7 +29,7 @@ export async function GET(
     });
     return NextResponse.json(
       { success: false, error: rateLimitCheck.error },
-      { status: 429 }
+      { status: 429 },
     );
   }
 
@@ -48,7 +48,7 @@ export async function GET(
     });
     return NextResponse.json(
       { success: false, error: '未授权，需要有效的 API Key' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -69,7 +69,7 @@ export async function GET(
       });
       return NextResponse.json(
         { success: false, error: '无效的视频 ID' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -86,7 +86,7 @@ export async function GET(
       });
       return NextResponse.json(
         { success: false, error: '无效的集数' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -105,7 +105,7 @@ export async function GET(
       });
       return NextResponse.json(
         { success: false, error: '视频不存在' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -129,7 +129,7 @@ export async function GET(
           error: `第 ${episodeNum} 集不存在`,
           availableEpisodes: video.play_urls.map((p) => p.episode),
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -163,7 +163,8 @@ export async function GET(
       request_params: requestParams,
       response_status: 500,
       auth_validated: true,
-      error_message: error instanceof Error ? error.message : '获取播放链接失败',
+      error_message:
+        error instanceof Error ? error.message : '获取播放链接失败',
       user_agent: userAgent,
     });
     return NextResponse.json(
@@ -171,7 +172,7 @@ export async function GET(
         success: false,
         error: '获取播放链接失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

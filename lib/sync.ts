@@ -47,7 +47,7 @@ const logProgress = (current: number, total: number, message: string): void => {
 async function updateProgress(
   current: number,
   total: number,
-  message: string
+  message: string,
 ): Promise<void> {
   await updateSyncStatus({
     is_syncing: true,
@@ -62,8 +62,12 @@ async function updateProgress(
 
 export async function fullSync(
   config: SyncConfig = DEFAULT_SYNC_CONFIG,
-  onProgress?: (progress: { current: number; total: number; message: string }) => void,
-  forceRestart: boolean = false
+  onProgress?: (progress: {
+    current: number;
+    total: number;
+    message: string;
+  }) => void,
+  forceRestart: boolean = false,
 ): Promise<{ added: number; updated: number }> {
   log('========================================');
   log('开始完整数据同步');
@@ -72,7 +76,7 @@ export async function fullSync(
   try {
     // 1. 检查同步状态
     const status = await getSyncStatus();
-    
+
     // 如果正在同步且不强制重启，则不允许
     if (status?.is_syncing && !forceRestart) {
       throw new Error('同步正在进行中，请稍后再试');
@@ -82,8 +86,13 @@ export async function fullSync(
     let startPage = 1;
     let resumeSync = false;
     let shouldClearData = false;
-    
-    if (status?.is_syncing && status.sync_type === 'full' && status.current_page > 0 && !forceRestart) {
+
+    if (
+      status?.is_syncing &&
+      status.sync_type === 'full' &&
+      status.current_page > 0 &&
+      !forceRestart
+    ) {
       // 断点续传
       startPage = status.current_page;
       resumeSync = true;
@@ -94,7 +103,7 @@ export async function fullSync(
       shouldClearData = true;
       log('强制重启模式：将清空所有数据...');
     }
-    
+
     // 如果需要清空数据，先清空
     if (shouldClearData) {
       log('清空现有数据...');
@@ -103,7 +112,7 @@ export async function fullSync(
     } else {
       log('使用覆盖模式同步（不清空现有数据）...');
     }
-    
+
     // 重置同步状态
     await updateSyncStatus({
       is_syncing: true,
@@ -139,10 +148,10 @@ export async function fullSync(
     });
 
     // 5. 分页同步视频
-    let totalProcessed = resumeSync ? (status?.synced_count || 0) : 0;
+    let totalProcessed = resumeSync ? status?.synced_count || 0 : 0;
     let totalAdded = resumeSync ? 0 : 0;
     let totalUpdated = 0;
-    
+
     for (let page = startPage; page <= totalPages; page++) {
       try {
         // 更新当前页码
@@ -193,7 +202,9 @@ export async function fullSync(
         // 批次之间添加随机延迟（避免被检测）
         if (page < totalPages) {
           const jitter = Math.random() * 500;
-          await new Promise((resolve) => setTimeout(resolve, config.requestInterval + jitter));
+          await new Promise((resolve) =>
+            setTimeout(resolve, config.requestInterval + jitter),
+          );
         }
       } catch (error) {
         log(`第 ${page} 页同步失败: ${error}`);
@@ -247,7 +258,11 @@ export async function fullSync(
 export async function incrementalSync(
   hours: number = 24,
   config: SyncConfig = DEFAULT_SYNC_CONFIG,
-  onProgress?: (progress: { current: number; total: number; message: string }) => void
+  onProgress?: (progress: {
+    current: number;
+    total: number;
+    message: string;
+  }) => void,
 ): Promise<{ added: number; updated: number }> {
   log('========================================');
   log(`开始增量数据同步 (最近 ${hours} 小时)`);
@@ -314,7 +329,10 @@ export async function incrementalSync(
         if (filteredVideos.length === 0) {
           // 如果这一页的所有视频都比同步时间旧，后续视频也肯定更旧，可以停止
           const oldestVideo = videoList[videoList.length - 1];
-          if (oldestVideo?.vod_time && new Date(oldestVideo.vod_time) <= syncStartDate) {
+          if (
+            oldestVideo?.vod_time &&
+            new Date(oldestVideo.vod_time) <= syncStartDate
+          ) {
             log(`第 ${page} 页及后续数据无需更新，停止同步`);
             break;
           }
@@ -332,7 +350,7 @@ export async function incrementalSync(
         // 只保留需要更新的视频（源API更新时间 > 数据库更新时间）
         const filteredDetails = details.filter((detail) => {
           const dbUpdateTime = dbUpdateTimeMap.get(detail.vod_id);
-          
+
           // 如果数据库中没有这个视频，需要添加
           if (!dbUpdateTime) {
             return true;
@@ -382,7 +400,9 @@ export async function incrementalSync(
 
         // 批次之间添加随机延迟（避免被检测）
         const jitter = Math.random() * 500;
-        await new Promise((resolve) => setTimeout(resolve, config.requestInterval + jitter));
+        await new Promise((resolve) =>
+          setTimeout(resolve, config.requestInterval + jitter),
+        );
       } catch (error) {
         log(`第 ${page} 页同步失败: ${error}`);
         throw error;
@@ -424,7 +444,11 @@ export async function incrementalSync(
 
 export async function resync(
   config: SyncConfig = DEFAULT_SYNC_CONFIG,
-  onProgress?: (progress: { current: number; total: number; message: string }) => void
+  onProgress?: (progress: {
+    current: number;
+    total: number;
+    message: string;
+  }) => void,
 ): Promise<{ added: number; updated: number }> {
   log('========================================');
   log('开始补充同步（检查缺失视频）');
@@ -490,7 +514,7 @@ export async function resync(
         // 检查哪些视频缺失
         const vodIds = videoList.map((v) => v.vod_id);
         const existingVideos = await getVideosUpdateTimeMap(vodIds);
-        const missingVodIds = vodIds.filter(id => !existingVideos.has(id));
+        const missingVodIds = vodIds.filter((id) => !existingVideos.has(id));
 
         if (missingVodIds.length === 0) {
           totalChecked += videoList.length;
@@ -532,7 +556,9 @@ export async function resync(
         // 批次之间添加随机延迟
         if (page < totalPages) {
           const jitter = Math.random() * 500;
-          await new Promise((resolve) => setTimeout(resolve, config.requestInterval + jitter));
+          await new Promise((resolve) =>
+            setTimeout(resolve, config.requestInterval + jitter),
+          );
         }
       } catch (error) {
         log(`第 ${page} 页检查失败: ${error}`);

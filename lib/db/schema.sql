@@ -133,6 +133,9 @@ CREATE TABLE IF NOT EXISTS api_config (
   rate_limit_minute INTEGER DEFAULT 60, -- 每分钟限制
   rate_limit_hourly INTEGER DEFAULT 1000, -- 每小时限制
   rate_limit_daily INTEGER DEFAULT 10000, -- 每天限制
+  timezone TEXT DEFAULT 'Asia/Shanghai', -- 系统时区
+  auto_clean_threshold INTEGER DEFAULT 80000, -- 自动清理阈值
+  max_log_count INTEGER DEFAULT 100000, -- 最大日志数量
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -168,7 +171,7 @@ CREATE TABLE IF NOT EXISTS api_logs (
   response_status INTEGER,
   auth_validated BOOLEAN DEFAULT false,
   error_message TEXT,
-  request_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  request_time TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
   user_agent TEXT,
   remaining_minute INTEGER,
   remaining_hourly INTEGER,
@@ -266,10 +269,18 @@ INSERT INTO api_field_config (api_endpoint, field_name, field_label, is_enabled,
 ('detail', 'added_at', '添加时间', false, false, 26)
 ON CONFLICT (api_endpoint, field_name) DO NOTHING;
 
--- 插入默认 API 配置（认证关闭，API Key 为空，设置速率限制）
-INSERT INTO api_config (api_key, auth_enabled, rate_limit_minute, rate_limit_hourly, rate_limit_daily)
-VALUES ('', false, 60, 1000, 10000)
-ON CONFLICT DO NOTHING;
+-- 插入默认 API 配置（认证关闭，API Key 为空，设置速率限制，时区为上海）
+INSERT INTO api_config (api_key, auth_enabled, rate_limit_minute, rate_limit_hourly, rate_limit_daily, timezone, auto_clean_threshold, max_log_count)
+VALUES ('', false, 60, 1000, 10000, 'Asia/Shanghai', 80000, 100000)
+ON CONFLICT DO UPDATE SET
+  api_key = EXCLUDED.api_key,
+  auth_enabled = EXCLUDED.auth_enabled,
+  rate_limit_minute = EXCLUDED.rate_limit_minute,
+  rate_limit_hourly = EXCLUDED.rate_limit_hourly,
+  rate_limit_daily = EXCLUDED.rate_limit_daily,
+  timezone = EXCLUDED.timezone,
+  auto_clean_threshold = EXCLUDED.auto_clean_threshold,
+  max_log_count = EXCLUDED.max_log_count;
 
 -- ============================================
 -- 清理函数

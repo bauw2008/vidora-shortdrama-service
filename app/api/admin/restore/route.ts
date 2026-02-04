@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   if (!verifyAuth(request)) {
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -19,14 +19,14 @@ export async function POST(request: Request) {
     if (!file) {
       return NextResponse.json(
         { success: false, error: '未上传文件' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!table) {
       return NextResponse.json(
         { success: false, error: '请指定表名' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -37,17 +37,19 @@ export async function POST(request: Request) {
     if (!filename.endsWith('.csv')) {
       return NextResponse.json(
         { success: false, error: '只支持 CSV 备份文件' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 去除所有回车符，统一使用换行符分隔
-    const normalizedContent = fileContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const lines = normalizedContent.split('\n').filter(line => line.trim());
+    const normalizedContent = fileContent
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+    const lines = normalizedContent.split('\n').filter((line) => line.trim());
     if (lines.length < 2) {
       return NextResponse.json(
         { success: false, error: 'CSV 文件为空或格式错误' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -72,11 +74,22 @@ export async function POST(request: Request) {
           }
         } else if (value === '' || value === 'null') {
           // 对于非空字段，使用默认值
-          if (['name', 'cover', 'description', 'play_urls', 'updated_at'].includes(header)) {
+          if (
+            [
+              'name',
+              'cover',
+              'description',
+              'play_urls',
+              'updated_at',
+            ].includes(header)
+          ) {
             row[header] = '';
           } else if (['tags', 'episode_count', 'vod_id'].includes(header)) {
-            row[header] = header === 'episode_count' || header === 'vod_id' ? 0 : [];
-          } else if (['id', 'category_id', 'sub_category_id'].includes(header)) {
+            row[header] =
+              header === 'episode_count' || header === 'vod_id' ? 0 : [];
+          } else if (
+            ['id', 'category_id', 'sub_category_id'].includes(header)
+          ) {
             row[header] = null;
           } else {
             row[header] = null;
@@ -115,7 +128,7 @@ export async function POST(request: Request) {
     // 如果需要，先清空表数据
     if (clearBeforeRestore) {
       const deleteQuery = supabase.from(table).delete();
-      
+
       // RLS 要求必须有 WHERE 条件，使用不存在的值
       if (table === 'videos') {
         deleteQuery.neq('vod_id', -1);
@@ -124,14 +137,17 @@ export async function POST(request: Request) {
       } else {
         deleteQuery.neq('id', -1);
       }
-      
+
       const { error: deleteError } = await deleteQuery;
 
       if (deleteError) {
         console.error(`清空表 ${table} 失败:`, deleteError);
         return NextResponse.json(
-          { success: false, error: `清空表 ${table} 失败: ${deleteError.message}` },
-          { status: 500 }
+          {
+            success: false,
+            error: `清空表 ${table} 失败: ${deleteError.message}`,
+          },
+          { status: 500 },
         );
       }
     }
@@ -173,7 +189,7 @@ export async function POST(request: Request) {
         success: false,
         error: error instanceof Error ? error.message : '恢复失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

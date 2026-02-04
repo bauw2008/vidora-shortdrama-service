@@ -17,22 +17,28 @@ interface ApiLogData {
 }
 
 // IP 访问缓存（用于智能采样）
-const ipAccessCache = new Map<string, {
-  lastLogTime: number;
-  successCount: number;
-  errorCount: number;
-}>();
+const ipAccessCache = new Map<
+  string,
+  {
+    lastLogTime: number;
+    successCount: number;
+    errorCount: number;
+  }
+>();
 
 // 清理过期缓存（每1小时清理一次）
-setInterval(() => {
-  const now = Date.now();
-  const oneHour = 60 * 60 * 1000;
-  for (const [ip, data] of ipAccessCache.entries()) {
-    if (now - data.lastLogTime > oneHour) {
-      ipAccessCache.delete(ip);
+setInterval(
+  () => {
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000;
+    for (const [ip, data] of ipAccessCache.entries()) {
+      if (now - data.lastLogTime > oneHour) {
+        ipAccessCache.delete(ip);
+      }
     }
-  }
-}, 60 * 60 * 1000);
+  },
+  60 * 60 * 1000,
+);
 
 /**
  * 判断是否应该记录日志（智能采样策略）
@@ -43,7 +49,10 @@ function shouldLog(data: ApiLogData): boolean {
   const cache = ipAccessCache.get(ip);
 
   // 1. 始终记录错误和限流警告
-  if (data.response_status && (data.response_status >= 400 || data.is_rate_limit_warning)) {
+  if (
+    data.response_status &&
+    (data.response_status >= 400 || data.is_rate_limit_warning)
+  ) {
     return true;
   }
 
@@ -103,6 +112,36 @@ export async function logApiCall(data: ApiLogData): Promise<void> {
   }
 
   try {
+    // 获取配置的时区
+    const { data: apiConfig } = await supabase
+      .from('api_config')
+      .select('timezone')
+      .order('id', { ascending: true })
+      .limit(1)
+      .single();
+
+    const timezone = apiConfig?.timezone || 'Asia/Shanghai';
+
+    // 使用 Intl API 获取指定时区的当前时间
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+    const localDate = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
+    const localTime = `${getPart('hour')}:${getPart('minute')}:${getPart('second')}`;
+
+    // 直接存储为本地时区时间（不带时区信息）
+    const request_time = `${localDate} ${localTime}`;
+
     await supabase.from('api_logs').insert({
       ip_address: data.ip_address,
       api_endpoint: data.api_endpoint,
@@ -117,6 +156,7 @@ export async function logApiCall(data: ApiLogData): Promise<void> {
       remaining_daily: data.remaining_daily || null,
       response_time_ms: data.response_time_ms || null,
       is_rate_limit_warning: data.is_rate_limit_warning || false,
+      request_time,
     });
   } catch (error) {
     // 日志记录失败不影响主业务
@@ -160,6 +200,36 @@ export function createPerformanceMonitor(startTime: number) {
  */
 export async function forceLogApiCall(data: ApiLogData): Promise<void> {
   try {
+    // 获取配置的时区
+    const { data: apiConfig } = await supabase
+      .from('api_config')
+      .select('timezone')
+      .order('id', { ascending: true })
+      .limit(1)
+      .single();
+
+    const timezone = apiConfig?.timezone || 'Asia/Shanghai';
+
+    // 使用 Intl API 获取指定时区的当前时间
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+    const localDate = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
+    const localTime = `${getPart('hour')}:${getPart('minute')}:${getPart('second')}`;
+
+    // 直接存储为本地时区时间（不带时区信息）
+    const request_time = `${localDate} ${localTime}`;
+
     await supabase.from('api_logs').insert({
       ip_address: data.ip_address,
       api_endpoint: data.api_endpoint,
@@ -174,6 +244,7 @@ export async function forceLogApiCall(data: ApiLogData): Promise<void> {
       remaining_daily: data.remaining_daily || null,
       response_time_ms: data.response_time_ms || null,
       is_rate_limit_warning: data.is_rate_limit_warning || false,
+      request_time,
     });
   } catch (error) {
     console.error('API 日志记录失败:', error);

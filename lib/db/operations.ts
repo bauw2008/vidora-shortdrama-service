@@ -67,7 +67,7 @@ export interface VideoData {
   cover: string;
   description: string;
   play_urls: PlayUrl[];
-  
+
   // 元数据字段
   actor: string;
   director: string;
@@ -75,8 +75,8 @@ export interface VideoData {
   area: string;
   lang: string;
   year: string;
-  remarks: string;  // 集数备注
-  
+  remarks: string; // 集数备注
+
   // 热度数据
   hits: number;
   hits_day: number;
@@ -84,14 +84,14 @@ export interface VideoData {
   hits_month: number;
   up: number;
   down: number;
-  
+
   // 评分数据
   score: number;
   score_num: number;
-  
+
   // 时间戳
-  updated_at: string;  // 更新时间（字符串格式）
-  added_at: number;    // 添加时间戳
+  updated_at: string; // 更新时间（字符串格式）
+  added_at: number; // 添加时间戳
   synced_at?: string;
 }
 
@@ -169,7 +169,7 @@ export async function createCategory(category: {
 
 export async function updateCategory(
   id: number,
-  updates: Partial<{ name: string; sort: number; is_active: boolean }>
+  updates: Partial<{ name: string; sort: number; is_active: boolean }>,
 ): Promise<Category | null> {
   const { data, error } = await supabase
     .from('categories')
@@ -187,10 +187,7 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('categories')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('categories').delete().eq('id', id);
 
   if (error) {
     console.error('删除分类失败:', error);
@@ -202,10 +199,10 @@ export async function deleteCategory(id: number): Promise<void> {
 // 二级分类操作
 // ============================================
 
-export async function getSubCategories(categoryId?: number): Promise<SubCategory[]> {
-  let query = supabase
-    .from('sub_categories')
-    .select('*');
+export async function getSubCategories(
+  categoryId?: number,
+): Promise<SubCategory[]> {
+  let query = supabase.from('sub_categories').select('*');
 
   if (categoryId) {
     query = query.eq('category_id', categoryId);
@@ -221,7 +218,9 @@ export async function getSubCategories(categoryId?: number): Promise<SubCategory
   return data || [];
 }
 
-export async function getOrCreateSubCategory(name: string): Promise<SubCategory> {
+export async function getOrCreateSubCategory(
+  name: string,
+): Promise<SubCategory> {
   // 先尝试查询
   const { data: existing, error: fetchError } = await supabase
     .from('sub_categories')
@@ -261,7 +260,7 @@ export async function getOrCreateSubCategory(name: string): Promise<SubCategory>
 
 export async function updateSubCategoryCategory(
   subCategoryId: number,
-  categoryId: number
+  categoryId: number,
 ): Promise<void> {
   const { error } = await supabase
     .from('sub_categories')
@@ -282,11 +281,10 @@ export async function getVideos(
   page: number = 1,
   pageSize: number = 20,
   categoryId?: number,
-  subCategoryId?: number
+  subCategoryId?: number,
+  client: any = supabase,
 ): Promise<PaginatedResult<VideoData>> {
-  let query = supabase
-    .from('videos')
-    .select('*', { count: 'exact' });
+  let query = client.from('videos').select('*', { count: 'exact' });
 
   if (categoryId) {
     query = query.eq('category_id', categoryId);
@@ -315,8 +313,11 @@ export async function getVideos(
   };
 }
 
-export async function getVideoByVodId(vodId: number): Promise<VideoData | null> {
-  const { data, error } = await supabase
+export async function getVideoByVodId(
+  vodId: number,
+  client: any = supabase,
+): Promise<VideoData | null> {
+  const { data, error } = await client
     .from('videos')
     .select('*')
     .eq('vod_id', vodId)
@@ -333,7 +334,9 @@ export async function getVideoByVodId(vodId: number): Promise<VideoData | null> 
   return data;
 }
 
-export async function getVideoUpdateTimeByVodId(vodId: number): Promise<string | null> {
+export async function getVideoUpdateTimeByVodId(
+  vodId: number,
+): Promise<string | null> {
   const { data, error } = await supabase
     .from('videos')
     .select('updated_at')
@@ -352,7 +355,9 @@ export async function getVideoUpdateTimeByVodId(vodId: number): Promise<string |
   return data?.updated_at || null;
 }
 
-export async function getVideosUpdateTimeMap(vodIds: number[]): Promise<Map<number, string>> {
+export async function getVideosUpdateTimeMap(
+  vodIds: number[],
+): Promise<Map<number, string>> {
   if (vodIds.length === 0) {
     return new Map();
   }
@@ -378,12 +383,13 @@ export async function getVideosUpdateTimeMap(vodIds: number[]): Promise<Map<numb
 export async function searchVideos(
   keyword: string,
   page: number = 1,
-  pageSize: number = 20
+  pageSize: number = 20,
+  client: any = supabase,
 ): Promise<PaginatedResult<VideoData>> {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const { data, error, count } = await supabase
+  const { data, error, count } = await client
     .from('videos')
     .select('*', { count: 'exact' })
     .or(`name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
@@ -403,7 +409,9 @@ export async function searchVideos(
   };
 }
 
-export async function saveVideos(videos: VideoData[]): Promise<{ added: number; updated: number }> {
+export async function saveVideos(
+  videos: VideoData[],
+): Promise<{ added: number; updated: number }> {
   if (videos.length === 0) {
     return { added: 0, updated: 0 };
   }
@@ -425,11 +433,9 @@ export async function saveVideos(videos: VideoData[]): Promise<{ added: number; 
     }
   }
 
-  const { error } = await supabase
-    .from('videos')
-    .upsert(videos, {
-      onConflict: 'vod_id',
-    });
+  const { error } = await supabase.from('videos').upsert(videos, {
+    onConflict: 'vod_id',
+  });
 
   if (error) {
     console.error('保存视频失败:', error);
@@ -441,7 +447,7 @@ export async function saveVideos(videos: VideoData[]): Promise<{ added: number; 
 
 export async function updateVideoCategory(
   vodId: number,
-  categoryId: number
+  categoryId: number,
 ): Promise<void> {
   const { error } = await supabase
     .from('videos')
@@ -456,11 +462,9 @@ export async function updateVideoCategory(
 
 export async function batchUpdateVideoCategory(
   categoryId: number,
-  subCategoryId?: number
+  subCategoryId?: number,
 ): Promise<number> {
-  let query = supabase
-    .from('videos')
-    .update({ category_id: categoryId });
+  let query = supabase.from('videos').update({ category_id: categoryId });
 
   if (subCategoryId) {
     // 更新指定二级分类的视频
@@ -472,7 +476,7 @@ export async function batchUpdateVideoCategory(
       .select('id')
       .eq('category_id', categoryId);
 
-    const subCategoryIds = subCategories?.map(sc => sc.id) || [];
+    const subCategoryIds = subCategories?.map((sc) => sc.id) || [];
     if (subCategoryIds.length > 0) {
       query = query.in('sub_category_id', subCategoryIds);
     } else {
@@ -512,7 +516,7 @@ export async function getSyncStatus(): Promise<SyncStatus | null> {
 }
 
 export async function updateSyncStatus(
-  status: Partial<SyncStatus>
+  status: Partial<SyncStatus>,
 ): Promise<void> {
   const { data: existing } = await supabase
     .from('sync_status')
@@ -522,18 +526,16 @@ export async function updateSyncStatus(
     .single();
 
   if (!existing) {
-    const { error } = await supabase
-      .from('sync_status')
-      .insert({
-        is_syncing: status.is_syncing ?? false,
-        sync_type: status.sync_type ?? '',
-        last_sync_time: status.last_sync_time,
-        total_videos: status.total_videos ?? 0,
-        total_categories: status.total_categories ?? 0,
-        current_page: status.current_page ?? 0,
-        total_pages: status.total_pages ?? 0,
-        synced_count: status.synced_count ?? 0,
-      });
+    const { error } = await supabase.from('sync_status').insert({
+      is_syncing: status.is_syncing ?? false,
+      sync_type: status.sync_type ?? '',
+      last_sync_time: status.last_sync_time,
+      total_videos: status.total_videos ?? 0,
+      total_categories: status.total_categories ?? 0,
+      current_page: status.current_page ?? 0,
+      total_pages: status.total_pages ?? 0,
+      synced_count: status.synced_count ?? 0,
+    });
 
     if (error) {
       console.error('创建同步状态失败:', error);
@@ -606,15 +608,18 @@ export async function getDatabaseStats(): Promise<{
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [videosResult, categoriesResult, subCategoriesResult, todayResult] = await Promise.all([
-    supabase.from('videos').select('*', { count: 'exact', head: true }),
-    supabase.from('categories').select('*', { count: 'exact', head: true }),
-    supabase.from('sub_categories').select('*', { count: 'exact', head: true }),
-    supabase
-      .from('videos')
-      .select('*', { count: 'exact', head: true })
-      .gte('synced_at', todayStart.toISOString()),
-  ]);
+  const [videosResult, categoriesResult, subCategoriesResult, todayResult] =
+    await Promise.all([
+      supabase.from('videos').select('*', { count: 'exact', head: true }),
+      supabase.from('categories').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('sub_categories')
+        .select('*', { count: 'exact', head: true }),
+      supabase
+        .from('videos')
+        .select('*', { count: 'exact', head: true })
+        .gte('synced_at', todayStart.toISOString()),
+    ]);
 
   return {
     totalVideos: videosResult.count || 0,
@@ -693,7 +698,7 @@ export async function getActiveApiSource(): Promise<ApiSource | null> {
 }
 
 export async function createApiSource(
-  source: Omit<ApiSource, 'id' | 'created_at' | 'updated_at'>
+  source: Omit<ApiSource, 'id' | 'created_at' | 'updated_at'>,
 ): Promise<ApiSource> {
   // 生成唯一 ID
   const id = `src_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -719,7 +724,7 @@ export async function createApiSource(
 
 export async function updateApiSource(
   id: string,
-  updates: Partial<Omit<ApiSource, 'id' | 'created_at' | 'updated_at'>>
+  updates: Partial<Omit<ApiSource, 'id' | 'created_at' | 'updated_at'>>,
 ): Promise<ApiSource | null> {
   const { data, error } = await supabase
     .from('api_sources')
@@ -740,10 +745,7 @@ export async function updateApiSource(
 }
 
 export async function deleteApiSource(id: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('api_sources')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('api_sources').delete().eq('id', id);
 
   if (error) {
     console.error('删除 API 源失败:', error);
@@ -791,13 +793,13 @@ export async function getSyncSchedules(): Promise<SyncSchedule[]> {
 export async function createSyncSchedule(
   name: string,
   hour: number,
-  minute: number
+  minute: number,
 ): Promise<SyncSchedule> {
   // 计算下次运行时间
   const now = new Date();
   const nextRun = new Date(now);
   nextRun.setHours(hour, minute, 0, 0);
-  
+
   // 如果今天的时间已经过了，设置为明天
   if (nextRun <= now) {
     nextRun.setDate(nextRun.getDate() + 1);
@@ -824,11 +826,16 @@ export async function createSyncSchedule(
 
 export async function updateSyncSchedule(
   id: number,
-  updates: Partial<Pick<SyncSchedule, 'name' | 'hour' | 'minute' | 'is_active' | 'next_run_time'>>
+  updates: Partial<
+    Pick<
+      SyncSchedule,
+      'name' | 'hour' | 'minute' | 'is_active' | 'next_run_time'
+    >
+  >,
 ): Promise<SyncSchedule> {
   // 如果更新了时间，需要重新计算下次运行时间
   let updateData = { ...updates };
-  
+
   if (updates.hour !== undefined || updates.minute !== undefined) {
     const { data: existing } = await supabase
       .from('sync_schedules')
@@ -839,15 +846,15 @@ export async function updateSyncSchedule(
     if (existing) {
       const hour = updates.hour ?? existing.hour;
       const minute = updates.minute ?? existing.minute;
-      
+
       const now = new Date();
       const nextRun = new Date(now);
       nextRun.setHours(hour, minute, 0, 0);
-      
+
       if (nextRun <= now) {
         nextRun.setDate(nextRun.getDate() + 1);
       }
-      
+
       updateData = { ...updateData, next_run_time: nextRun.toISOString() };
     }
   }
@@ -868,10 +875,7 @@ export async function updateSyncSchedule(
 }
 
 export async function deleteSyncSchedule(id: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('sync_schedules')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('sync_schedules').delete().eq('id', id);
 
   if (error) {
     console.error('删除定时同步配置失败:', error);
@@ -894,7 +898,7 @@ export async function updateSyncScheduleRunTime(id: number): Promise<void> {
   const now = new Date();
   const nextRun = new Date(now);
   nextRun.setHours(existing.hour, existing.minute, 0, 0);
-  
+
   // 设置为明天的这个时间
   nextRun.setDate(nextRun.getDate() + 1);
 
@@ -916,9 +920,10 @@ export async function updateSyncScheduleRunTime(id: number): Promise<void> {
 // ============================================
 
 export async function getFieldConfigs(
-  apiEndpoint: 'list' | 'detail'
+  apiEndpoint: 'list' | 'detail',
+  client: any = supabase,
 ): Promise<ApiFieldConfig[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('api_field_config')
     .select('*')
     .eq('api_endpoint', apiEndpoint)
@@ -934,7 +939,9 @@ export async function getFieldConfigs(
 
 export async function updateFieldConfig(
   id: number,
-  updates: Partial<Pick<ApiFieldConfig, 'is_enabled' | 'is_required' | 'display_order'>>
+  updates: Partial<
+    Pick<ApiFieldConfig, 'is_enabled' | 'is_required' | 'display_order'>
+  >,
 ): Promise<ApiFieldConfig> {
   const { data, error } = await supabase
     .from('api_field_config')
@@ -952,13 +959,14 @@ export async function updateFieldConfig(
 }
 
 export async function getEnabledFields(
-  apiEndpoint: 'list' | 'detail'
+  apiEndpoint: 'list' | 'detail',
+  client: any = supabase,
 ): Promise<string[]> {
-  const configs = await getFieldConfigs(apiEndpoint);
+  const configs = await getFieldConfigs(apiEndpoint, client);
   return configs
-    .filter(config => config.is_enabled)
+    .filter((config) => config.is_enabled)
     .sort((a, b) => a.display_order - b.display_order)
-    .map(config => config.field_name);
+    .map((config) => config.field_name);
 }
 
 // ============================================
@@ -972,6 +980,9 @@ export interface ApiConfig {
   rate_limit_minute: number;
   rate_limit_hourly: number;
   rate_limit_daily: number;
+  timezone: string;
+  auto_clean_threshold: number;
+  max_log_count: number;
   updated_at: string;
 }
 
@@ -997,6 +1008,9 @@ export async function updateApiConfig(updates: {
   rate_limit_minute?: number;
   rate_limit_hourly?: number;
   rate_limit_daily?: number;
+  timezone?: string;
+  auto_clean_threshold?: number;
+  max_log_count?: number;
 }): Promise<ApiConfig> {
   const { data: existing } = await supabase
     .from('api_config')

@@ -3,16 +3,20 @@ import { getVideoByVodId, getEnabledFields } from '@/lib/db/operations';
 import { verifyApiKey } from '@/lib/auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logApiCall, getRequestParams, getUserAgent } from '@/lib/api-logger';
+import { createEdgeClient } from '@/lib/supabase';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const clientIp = getClientIp(request);
   const requestParams = getRequestParams(request);
   const userAgent = getUserAgent(request);
   const apiEndpoint = `/api/detail/${id}`;
+
+  // 使用 Edge 专用的 Supabase 客户端
+  const supabase = createEdgeClient();
 
   // 检查速率限制
   const rateLimitCheck = await checkRateLimit(request);
@@ -29,7 +33,7 @@ export async function GET(
     });
     return NextResponse.json(
       { success: false, error: rateLimitCheck.error },
-      { status: 429 }
+      { status: 429 },
     );
   }
 
@@ -48,7 +52,7 @@ export async function GET(
     });
     return NextResponse.json(
       { success: false, error: '未授权，需要有效的 API Key' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -68,12 +72,12 @@ export async function GET(
       });
       return NextResponse.json(
         { success: false, error: '无效的视频 ID' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 获取视频数据
-    const video = await getVideoByVodId(vodId);
+    const video = await getVideoByVodId(vodId, supabase);
 
     if (!video) {
       logApiCall({
@@ -88,16 +92,16 @@ export async function GET(
       });
       return NextResponse.json(
         { success: false, error: '视频不存在' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // 获取启用的字段列表
-    const enabledFields = await getEnabledFields('detail');
+    const enabledFields = await getEnabledFields('detail', supabase);
 
     // 根据启用的字段过滤数据
     const filteredData: any = {};
-    enabledFields.forEach(field => {
+    enabledFields.forEach((field) => {
       if (field in video) {
         filteredData[field] = (video as any)[field];
       }
@@ -126,7 +130,8 @@ export async function GET(
       request_params: requestParams,
       response_status: 500,
       auth_validated: true,
-      error_message: error instanceof Error ? error.message : '获取视频详情失败',
+      error_message:
+        error instanceof Error ? error.message : '获取视频详情失败',
       user_agent: userAgent,
     });
     return NextResponse.json(
@@ -134,7 +139,7 @@ export async function GET(
         success: false,
         error: '获取视频详情失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

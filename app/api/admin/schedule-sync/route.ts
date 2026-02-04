@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     // 如果配置了 CRON_SECRET，则验证
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
         success: false,
         error: error instanceof Error ? error.message : '启动增量同步失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -75,7 +75,9 @@ export async function GET() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-cron-secret': process.env.CRON_SECRET ? '(从环境变量 CRON_SECRET 获取)' : '(可选，建议配置)',
+          'x-cron-secret': process.env.CRON_SECRET
+            ? '(从环境变量 CRON_SECRET 获取)'
+            : '(可选，建议配置)',
         },
         cronExamples: [
           {

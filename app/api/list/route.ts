@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import { getVideos, getEnabledFields } from '@/lib/db/operations';
 import { verifyApiKey } from '@/lib/auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { logApiCall, getRequestParams, getUserAgent, createPerformanceMonitor } from '@/lib/api-logger';
+import {
+  logApiCall,
+  getRequestParams,
+  getUserAgent,
+  createPerformanceMonitor,
+} from '@/lib/api-logger';
+import { createEdgeClient } from '@/lib/supabase';
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic'; // 搜索类接口不建议缓存
@@ -13,6 +19,9 @@ export async function GET(request: Request) {
   const clientIp = getClientIp(request);
   const requestParams = getRequestParams(request);
   const userAgent = getUserAgent(request);
+
+  // 使用 Edge 专用的 Supabase 客户端
+  const supabase = createEdgeClient();
 
   try {
     // 检查速率限制
@@ -35,7 +44,7 @@ export async function GET(request: Request) {
       });
       return NextResponse.json(
         { success: false, error: rateLimitCheck.error },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -55,7 +64,7 @@ export async function GET(request: Request) {
       });
       return NextResponse.json(
         { success: false, error: '未授权，需要有效的 API Key' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -84,7 +93,7 @@ export async function GET(request: Request) {
       });
       return NextResponse.json(
         { success: false, error: '页码必须大于 0' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -102,20 +111,20 @@ export async function GET(request: Request) {
       });
       return NextResponse.json(
         { success: false, error: '每页数量必须在 1-100 之间' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 获取启用的字段列表
-    const enabledFields = await getEnabledFields('list');
+    const enabledFields = await getEnabledFields('list', supabase);
 
-    // 获取视频数据
-    const result = await getVideos(page, pageSize, categoryId, subCategoryId);
+    // 获取视频数据，传入 Edge 客户端
+    const result = await getVideos(page, pageSize, categoryId, subCategoryId, supabase);
 
     // 根据启用的字段过滤数据
-    const filteredData = result.list.map(video => {
+    const filteredData = result.list.map((video) => {
       const filtered: any = {};
-      enabledFields.forEach(field => {
+      enabledFields.forEach((field) => {
         if (field in video) {
           filtered[field] = (video as any)[field];
         }
@@ -157,7 +166,8 @@ export async function GET(request: Request) {
       request_params: requestParams,
       response_status: 500,
       auth_validated: true,
-      error_message: error instanceof Error ? error.message : '获取视频列表失败',
+      error_message:
+        error instanceof Error ? error.message : '获取视频列表失败',
       user_agent: userAgent,
       response_time_ms: performanceMonitor.getResponseTime(),
     });
@@ -166,7 +176,7 @@ export async function GET(request: Request) {
         success: false,
         error: '获取视频列表失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

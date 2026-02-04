@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   if (!verifyAuth(request)) {
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     if (format !== 'csv' || !table) {
       return NextResponse.json(
         { success: false, error: '请指定表名和格式（CSV）' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -27,7 +27,12 @@ export async function GET(request: Request) {
     let headers: string[] = [];
 
     // 分页获取所有数据的函数
-    const fetchAllData = async (tableName: string, orderBy: string = 'id', ascending: boolean = true, limitCount: number | null = null) => {
+    const fetchAllData = async (
+      tableName: string,
+      orderBy: string = 'id',
+      ascending: boolean = true,
+      limitCount: number | null = null,
+    ) => {
       const pageSize = 1000;
       let allData: any[] = [];
       let page = 0;
@@ -115,14 +120,14 @@ export async function GET(request: Request) {
       default:
         return NextResponse.json(
           { success: false, error: '无效的表名' },
-          { status: 400 }
+          { status: 400 },
         );
     }
 
     // 转换为 CSV（一行一条记录）
     const csvRows = [headers.join(',')];
     for (const row of data) {
-      const values = headers.map(header => {
+      const values = headers.map((header) => {
         let value = row[header];
         if (value === null || value === undefined) return '';
         if (typeof value === 'object') {
@@ -130,7 +135,11 @@ export async function GET(request: Request) {
         }
         // 转义引号和逗号
         const stringValue = String(value);
-        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        if (
+          stringValue.includes(',') ||
+          stringValue.includes('"') ||
+          stringValue.includes('\n')
+        ) {
           return `"${stringValue.replace(/"/g, '""')}"`;
         }
         return stringValue;
@@ -154,7 +163,7 @@ export async function GET(request: Request) {
         success: false,
         error: '备份失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

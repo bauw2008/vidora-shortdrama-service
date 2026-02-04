@@ -20,9 +20,9 @@ export async function GET(request: Request) {
     // 验证安全性（使用 CRON_SECRET 或 ADMIN_API_KEY）
     const authHeader = request.headers.get('authorization');
     const cronSecret = request.headers.get('x-cron-secret');
-    
+
     const authValid = await verifyApiKey(request);
-    
+
     // 验证 CRON_SECRET：使用 HMAC-SHA256 签名验证
     let secretValid = false;
     if (cronSecret) {
@@ -30,12 +30,15 @@ export async function GET(request: Request) {
         // 预期格式: timestamp:signature
         const [timestampStr, signature] = cronSecret.split(':');
         const timestamp = parseInt(timestampStr);
-        
+
         // 检查时间戳是否在 5 分钟内（防止重放攻击）
         const now = Math.floor(Date.now() / 1000);
         if (Math.abs(now - timestamp) <= 300) {
           // 使用 GitHub Secrets 中的 CRON_SECRET 生成签名
-          const expectedSignature = generateTimestampSignature(timestamp, cronSecret);
+          const expectedSignature = generateTimestampSignature(
+            timestamp,
+            cronSecret,
+          );
           secretValid = signature === expectedSignature;
         }
       } catch (error) {
@@ -43,11 +46,11 @@ export async function GET(request: Request) {
         secretValid = false;
       }
     }
-    
+
     if (!authValid && !secretValid) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -57,11 +60,13 @@ export async function GET(request: Request) {
     const currentHour = utc8Time.getHours();
     const currentMinute = utc8Time.getMinutes();
 
-    console.log(`[CronTrigger] 检查定时任务 - 当前时间: ${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')} (UTC+8)`);
+    console.log(
+      `[CronTrigger] 检查定时任务 - 当前时间: ${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')} (UTC+8)`,
+    );
 
     // 查询所有启用的定时任务
     const schedules = await getSyncSchedules();
-    const activeSchedules = schedules.filter(s => s.is_active);
+    const activeSchedules = schedules.filter((s) => s.is_active);
 
     if (activeSchedules.length === 0) {
       console.log('[CronTrigger] 没有启用的定时任务');
@@ -74,7 +79,7 @@ export async function GET(request: Request) {
 
     // 查找需要执行的任务（当前时间匹配）
     const pendingTasks = activeSchedules.filter(
-      s => s.hour === currentHour && s.minute === currentMinute
+      (s) => s.hour === currentHour && s.minute === currentMinute,
     );
 
     if (pendingTasks.length === 0) {
@@ -96,14 +101,16 @@ export async function GET(request: Request) {
     const results = [];
     for (const task of pendingTasks) {
       try {
-        console.log(`[CronTrigger] 执行任务: ${task.name} (${task.hour}:${task.minute.toString().padStart(2, '0')})`);
+        console.log(
+          `[CronTrigger] 执行任务: ${task.name} (${task.hour}:${task.minute.toString().padStart(2, '0')})`,
+        );
 
         // 调用同步 API
         const syncResponse = await fetch(`${baseUrl}/api/admin/sync`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.ADMIN_API_KEY}`,
+            Authorization: `Bearer ${process.env.ADMIN_API_KEY}`,
           },
           body: JSON.stringify({
             type: 'incremental',
@@ -142,7 +149,9 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log(`[CronTrigger] 所有任务执行完成，成功: ${results.filter(r => r.status === 'success').length}/${results.length}`);
+    console.log(
+      `[CronTrigger] 所有任务执行完成，成功: ${results.filter((r) => r.status === 'success').length}/${results.length}`,
+    );
 
     return NextResponse.json({
       success: true,
@@ -156,7 +165,7 @@ export async function GET(request: Request) {
         success: false,
         error: error instanceof Error ? error.message : '处理失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

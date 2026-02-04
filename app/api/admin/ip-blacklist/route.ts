@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   if (!verifyAuth(request)) {
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     console.error('获取 IP 黑名单失败:', error);
     return NextResponse.json(
       { success: false, error: '获取 IP 黑名单失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   if (!verifyAuth(request)) {
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -59,22 +59,26 @@ export async function POST(request: Request) {
     if (!ip_address) {
       return NextResponse.json(
         { success: false, error: 'IP 地址不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 简单的 IP 地址验证
-    const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    const ipPattern =
+      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     if (!ipPattern.test(ip_address)) {
       return NextResponse.json(
         { success: false, error: '无效的 IP 地址格式' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const { data, error } = await supabase
       .from('ip_blacklist')
-      .upsert({ ip_address, reason: reason || '' }, { onConflict: 'ip_address' })
+      .upsert(
+        { ip_address, reason: reason || '' },
+        { onConflict: 'ip_address' },
+      )
       .select()
       .single();
 
@@ -91,7 +95,7 @@ export async function POST(request: Request) {
     console.error('添加 IP 到黑名单失败:', error);
     return NextResponse.json(
       { success: false, error: '添加 IP 到黑名单失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -100,7 +104,7 @@ export async function DELETE(request: Request) {
   if (!verifyAuth(request)) {
     return NextResponse.json(
       { success: false, error: '未授权' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -111,7 +115,7 @@ export async function DELETE(request: Request) {
     if (!ip_address) {
       return NextResponse.json(
         { success: false, error: 'IP 地址不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -132,7 +136,7 @@ export async function DELETE(request: Request) {
     console.error('从黑名单移除 IP 失败:', error);
     return NextResponse.json(
       { success: false, error: '从黑名单移除 IP 失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

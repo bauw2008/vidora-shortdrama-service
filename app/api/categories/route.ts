@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json(
       { success: false, error: rateLimitCheck.error },
-      { status: 429 }
+      { status: 429 },
     );
   }
 
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json(
       { success: false, error: '未授权，需要有效的 API Key' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
         success: false,
         error: '获取分类失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

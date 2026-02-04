@@ -20,14 +20,14 @@ export async function POST(request: Request) {
     } else {
       return NextResponse.json(
         { success: false, error: '用户名或密码错误' },
-        { status: 401 }
+        { status: 401 },
       );
     }
   } catch (error) {
     console.error('登录失败:', error);
     return NextResponse.json(
       { success: false, error: '登录失败' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

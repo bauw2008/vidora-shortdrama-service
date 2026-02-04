@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json(
       { success: false, error: rateLimitCheck.error },
-      { status: 429 }
+      { status: 429 },
     );
   }
 
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json(
       { success: false, error: '未授权，需要有效的 API Key' },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -78,7 +78,8 @@ export async function GET(request: Request) {
       request_params: requestParams,
       response_status: 500,
       auth_validated: true,
-      error_message: error instanceof Error ? error.message : '获取二级分类失败',
+      error_message:
+        error instanceof Error ? error.message : '获取二级分类失败',
       user_agent: userAgent,
     });
     return NextResponse.json(
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
         success: false,
         error: '获取二级分类失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     // 1. 获取视频列表（只获取少量）
     const listResponse = await sourceClient.getList(1, count);
-    
+
     if (!listResponse || listResponse.list.length === 0) {
       return NextResponse.json({
         success: false,
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     }
 
     // 2. 获取视频详情
-    const vodIds = listResponse.list.map(v => v.vod_id);
+    const vodIds = listResponse.list.map((v) => v.vod_id);
     const detailsList = await sourceClient.getBatchDetails(vodIds);
 
     if (!detailsList || detailsList.length === 0) {
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     console.log('【测试同步 - 完整数据】');
     console.log('='.repeat(80));
     console.log(`共获取 ${transformedData.length} 个视频数据\n`);
-    
+
     transformedData.forEach((item, index) => {
       console.log(`\n【视频 ${index + 1}】`);
       console.log('-'.repeat(80));
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         success: false,
         error: `测试同步失败: ${error instanceof Error ? error.message : '未知错误'}`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

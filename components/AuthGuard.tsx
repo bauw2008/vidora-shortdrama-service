@@ -35,8 +35,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">加载中...</div>
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='text-gray-500'>加载中...</div>
       </div>
     );
   }

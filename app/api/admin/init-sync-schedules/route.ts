@@ -8,13 +8,13 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // 检查是否已经有定时同步配置
     const existingSchedules = await getSyncSchedules();
-    
+
     if (existingSchedules.length > 0) {
       return NextResponse.json({
         success: true,
@@ -31,7 +31,11 @@ export async function POST(request: Request) {
 
     const createdSchedules = [];
     for (const schedule of schedules) {
-      const created = await createSyncSchedule(schedule.name, schedule.hour, schedule.minute);
+      const created = await createSyncSchedule(
+        schedule.name,
+        schedule.hour,
+        schedule.minute,
+      );
       createdSchedules.push(created);
     }
 
@@ -47,7 +51,7 @@ export async function POST(request: Request) {
         success: false,
         error: `初始化定时同步配置失败: ${error instanceof Error ? error.message : '未知错误'}`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

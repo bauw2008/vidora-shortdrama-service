@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { clearVideos, clearSubCategories, resetSyncStatus } from '@/lib/db/operations';
+import {
+  clearVideos,
+  clearSubCategories,
+  resetSyncStatus,
+} from '@/lib/db/operations';
 import { verifyAuth } from '@/lib/auth';
 
 // ============================================
@@ -12,7 +16,7 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -43,7 +47,7 @@ export async function POST(request: Request) {
         success: false,
         error: '重置数据库失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

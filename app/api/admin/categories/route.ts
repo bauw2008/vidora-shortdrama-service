@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         success: false,
         error: '获取分类失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     if (!name) {
       return NextResponse.json(
         { success: false, error: '分类名称不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         success: false,
         error: '创建分类失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -79,7 +79,7 @@ export async function PUT(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -89,7 +89,7 @@ export async function PUT(request: Request) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: '分类ID不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -106,7 +106,7 @@ export async function PUT(request: Request) {
         success: false,
         error: '更新分类失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -117,7 +117,7 @@ export async function DELETE(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -127,7 +127,7 @@ export async function DELETE(request: Request) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: '分类ID不能为空' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -144,7 +144,7 @@ export async function DELETE(request: Request) {
         success: false,
         error: '删除分类失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -83,7 +83,9 @@ export interface ParsedCategory {
   type_name: string;
 }
 
-export function parseCategories(apiCategories: ApiCategory[]): ParsedCategory[] {
+export function parseCategories(
+  apiCategories: ApiCategory[],
+): ParsedCategory[] {
   return apiCategories
     .filter((cat) => cat.type_pid === 0)
     .map((cat) => ({
@@ -98,7 +100,7 @@ export function parseCategories(apiCategories: ApiCategory[]): ParsedCategory[] 
 
 export async function parseVideoDetail(
   apiData: ApiVideoDetail,
-  defaultCategoryId: number | null = null
+  defaultCategoryId: number | null = null,
 ): Promise<VideoData> {
   // 1. 解析标签（vod_class 可能包含多个标签，逗号分隔）
   // 处理 vod_class 为空、null、undefined 的情况
@@ -117,7 +119,7 @@ export async function parseVideoDetail(
 
   // 4. 清理简介（优先使用 vod_blurb，如果没有则使用 vod_content）
   const description = stripHtmlTags(
-    apiData.vod_blurb || apiData.vod_content || ''
+    apiData.vod_blurb || apiData.vod_content || '',
   );
 
   return {
@@ -130,7 +132,7 @@ export async function parseVideoDetail(
     cover: apiData.vod_pic,
     description: description,
     play_urls: playUrls,
-    
+
     // 元数据字段
     actor: apiData.vod_actor || '',
     director: apiData.vod_director || '',
@@ -139,7 +141,7 @@ export async function parseVideoDetail(
     lang: apiData.vod_lang || '',
     year: apiData.vod_year || '',
     remarks: apiData.vod_remarks || '',
-    
+
     // 热度数据
     hits: apiData.vod_hits || 0,
     hits_day: apiData.vod_hits_day || 0,
@@ -147,11 +149,11 @@ export async function parseVideoDetail(
     hits_month: apiData.vod_hits_month || 0,
     up: apiData.vod_up || 0,
     down: apiData.vod_down || 0,
-    
+
     // 评分数据
     score: apiData.vod_score || 0,
     score_num: apiData.vod_score_num || 0,
-    
+
     // 时间戳
     updated_at: apiData.vod_time,
     added_at: apiData.vod_time_add ? parseInt(apiData.vod_time_add) : 0,
@@ -190,15 +192,15 @@ export function parsePlayUrls(vodPlayUrl: string): PlayUrl[] {
 
 export function stripHtmlTags(html: string): string {
   let result = html;
-  
+
   // 移除所有 HTML 标签
   result = result.replace(/<[^>]*>/g, '');
-  
+
   // 循环解码 HTML 实体，直到没有 &amp; 为止（处理多重编码）
   while (result.includes('&amp;')) {
     result = result.replace(/&amp;/g, '&');
   }
-  
+
   // 解码其他 HTML 实体
   result = result
     .replace(/&nbsp;/g, ' ')
@@ -206,7 +208,7 @@ export function stripHtmlTags(html: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&apos;/g, "'");
-  
+
   // 压缩空白字符并去除首尾空白
   return result.replace(/\s+/g, ' ').trim();
 }
@@ -217,10 +219,10 @@ export function stripHtmlTags(html: string): string {
 
 export async function parseVideoDetails(
   apiDetails: ApiVideoDetail[],
-  defaultCategoryId: number | null = null
+  defaultCategoryId: number | null = null,
 ): Promise<VideoData[]> {
   const promises = apiDetails.map((detail) =>
-    parseVideoDetail(detail, defaultCategoryId)
+    parseVideoDetail(detail, defaultCategoryId),
   );
   return Promise.all(promises);
 }

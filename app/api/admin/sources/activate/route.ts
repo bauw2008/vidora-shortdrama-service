@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     if (!verifyAuth(request)) {
       return NextResponse.json(
         { success: false, error: '未授权' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: '缺少 API 源 ID' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         success: false,
         error: '激活 API 源失败',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -54,7 +54,10 @@ export async function checkIpBlacklist(ip: string): Promise<boolean> {
 }
 
 // 添加 IP 到黑名单
-export async function addToBlacklist(ip: string, reason: string = ''): Promise<void> {
+export async function addToBlacklist(
+  ip: string,
+  reason: string = '',
+): Promise<void> {
   await supabase
     .from('ip_blacklist')
     .upsert({ ip_address: ip, reason }, { onConflict: 'ip_address' });
@@ -65,7 +68,9 @@ export async function getRateLimitConfig(): Promise<RateLimitConfig | null> {
   try {
     const { data, error } = await supabase
       .from('api_config')
-      .select('rate_limit_minute, rate_limit_hourly, rate_limit_daily, auth_enabled')
+      .select(
+        'rate_limit_minute, rate_limit_hourly, rate_limit_daily, auth_enabled',
+      )
       .order('id', { ascending: true })
       .limit(1)
       .single();
@@ -85,12 +90,36 @@ export async function getRateLimitConfig(): Promise<RateLimitConfig | null> {
 export async function checkAndRecordRateLimit(
   identifier: string,
   type: 'ip' | 'apikey',
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): Promise<RateLimitCheck> {
   const now = new Date();
-  const minuteWindow = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0);
-  const hourWindow = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
-  const dayWindow = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const minuteWindow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    0,
+    0,
+  );
+  const hourWindow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    0,
+    0,
+    0,
+  );
+  const dayWindow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
 
   try {
     // 检查现有记录
@@ -129,18 +158,16 @@ export async function checkAndRecordRateLimit(
         .eq('id', existing.id);
     } else {
       // 创建新记录
-      await supabase
-        .from('api_rate_limits')
-        .insert({
-          identifier,
-          type,
-          minute_count: 1,
-          hourly_count: 1,
-          daily_count: 1,
-          minute_window: minuteWindow.toISOString(),
-          hour_window: hourWindow.toISOString(),
-          day_window: dayWindow.toISOString(),
-        });
+      await supabase.from('api_rate_limits').insert({
+        identifier,
+        type,
+        minute_count: 1,
+        hourly_count: 1,
+        daily_count: 1,
+        minute_window: minuteWindow.toISOString(),
+        hour_window: hourWindow.toISOString(),
+        day_window: dayWindow.toISOString(),
+      });
 
       minuteCount = 1;
       hourlyCount = 1;
@@ -191,16 +218,18 @@ export async function checkAndRecordRateLimit(
 }
 
 // 主检查函数
-export async function checkRateLimit(request: Request): Promise<RateLimitCheck> {
+export async function checkRateLimit(
+  request: Request,
+): Promise<RateLimitCheck> {
   const config = await getRateLimitConfig();
-  
+
   // 如果配置无效，允许所有请求（避免服务不可用）
   if (!config) {
     return { success: true };
   }
 
   const ip = getClientIp(request);
-  
+
   // 检查 IP 黑名单（始终生效，不受认证开关影响）
   if (await checkIpBlacklist(ip)) {
     return {

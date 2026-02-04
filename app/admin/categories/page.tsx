@@ -22,12 +22,18 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null,
+  );
 
   // 添加分类相关状态
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState({ name: '', sort: 0, is_active: true });
+  const [formData, setFormData] = useState({
+    name: '',
+    sort: 0,
+    is_active: true,
+  });
 
   const fetchData = async () => {
     try {
@@ -129,7 +135,7 @@ export default function CategoriesPage() {
 
   const handleUpdateSubCategoryMapping = async (
     subCategoryId: number,
-    categoryId: number
+    categoryId: number,
   ) => {
     try {
       const token = localStorage.getItem('admin_token');
@@ -159,7 +165,7 @@ export default function CategoriesPage() {
     }
 
     const selectedSubCategories = subCategories.filter(
-      (sc) => sc.category_id === selectedCategoryId
+      (sc) => sc.category_id === selectedCategoryId,
     );
 
     if (selectedSubCategories.length === 0) {
@@ -213,8 +219,8 @@ export default function CategoriesPage() {
   if (loading) {
     return (
       <AuthGuard>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-gray-500">加载中...</div>
+        <div className='flex items-center justify-center min-h-screen'>
+          <div className='text-gray-500'>加载中...</div>
         </div>
       </AuthGuard>
     );
@@ -222,27 +228,25 @@ export default function CategoriesPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className='min-h-screen bg-gray-50'>
+        <header className='bg-white shadow'>
+          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
             <button
               onClick={() => router.push('/admin')}
-              className="text-indigo-600 hover:text-indigo-700"
+              className='text-indigo-600 hover:text-indigo-700'
             >
               ← 返回
             </button>
-            <h1 className="text-2xl font-bold text-gray-900 mt-2">
-              分类管理
-            </h1>
+            <h1 className='text-2xl font-bold text-gray-900 mt-2'>分类管理</h1>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
           {/* 一级分类 */}
-          <div className="bg-white shadow rounded-lg mb-8">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
+          <div className='bg-white shadow rounded-lg mb-8'>
+            <div className='px-4 py-5 sm:p-6'>
+              <div className='flex items-center justify-between mb-4'>
+                <h3 className='text-lg leading-6 font-medium text-gray-900'>
                   一级分类
                 </h3>
                 <button
@@ -251,7 +255,7 @@ export default function CategoriesPage() {
                     setFormData({ name: '', sort: 0, is_active: true });
                     setShowAddForm(!showAddForm);
                   }}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  className='inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700'
                 >
                   {showAddForm ? '取消' : '添加分类'}
                 </button>
@@ -259,42 +263,53 @@ export default function CategoriesPage() {
 
               {/* 添加/编辑表单 */}
               {showAddForm && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-md">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className='mb-4 p-4 bg-gray-50 rounded-md'>
+                  <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>
                         分类名称
                       </label>
                       <input
-                        type="text"
+                        type='text'
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        placeholder="如：都市短剧"
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        className='block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm'
+                        placeholder='如：都市短剧'
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>
                         排序
                       </label>
                       <input
-                        type="number"
+                        type='number'
                         value={formData.sort}
-                        onChange={(e) => setFormData({ ...formData, sort: parseInt(e.target.value) })}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            sort: parseInt(e.target.value),
+                          })
+                        }
+                        className='block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm'
                       />
                     </div>
-                    <div className="flex items-end">
+                    <div className='flex items-end'>
                       <button
-                        onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}
-                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                        onClick={
+                          editingCategory
+                            ? handleUpdateCategory
+                            : handleCreateCategory
+                        }
+                        className='w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700'
                       >
                         {editingCategory ? '更新' : '创建'}
                       </button>
                       {editingCategory && (
                         <button
                           onClick={handleCancelEdit}
-                          className="ml-2 w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                          className='ml-2 w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50'
                         >
                           取消
                         </button>
@@ -305,16 +320,16 @@ export default function CategoriesPage() {
               )}
 
               {/* 分类列表 */}
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 {/* 全部分类（虚拟分类） */}
-                <div className="flex items-center justify-between p-3 border-2 border-dashed border-gray-300 rounded-md bg-gray-50">
-                  <div className="flex items-center">
-                    <span className="font-medium text-gray-700">全部分类</span>
-                    <span className="ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                <div className='flex items-center justify-between p-3 border-2 border-dashed border-gray-300 rounded-md bg-gray-50'>
+                  <div className='flex items-center'>
+                    <span className='font-medium text-gray-700'>全部分类</span>
+                    <span className='ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded'>
                       虚拟分类
                     </span>
                   </div>
-                  <span className="text-sm text-gray-500">
+                  <span className='text-sm text-gray-500'>
                     显示所有视频（随机排序）
                   </span>
                 </div>
@@ -323,27 +338,31 @@ export default function CategoriesPage() {
                 {categories.map((cat) => (
                   <div
                     key={cat.id}
-                    className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50"
+                    className='flex items-center justify-between p-3 border rounded-md hover:bg-gray-50'
                   >
-                    <div className="flex items-center">
-                      <span className="font-medium">{cat.name}</span>
-                      <span className="ml-2 text-xs px-2 py-1 rounded ${
+                    <div className='flex items-center'>
+                      <span className='font-medium'>{cat.name}</span>
+                      <span
+                        className="ml-2 text-xs px-2 py-1 rounded ${
                         cat.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }">
+                      }"
+                      >
                         {cat.is_active ? '启用' : '禁用'}
                       </span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">排序: {cat.sort}</span>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-sm text-gray-500'>
+                        排序: {cat.sort}
+                      </span>
                       <button
                         onClick={() => handleEditCategory(cat)}
-                        className="text-indigo-600 hover:text-indigo-700 text-sm"
+                        className='text-indigo-600 hover:text-indigo-700 text-sm'
                       >
                         编辑
                       </button>
                       <button
                         onClick={() => handleDeleteCategory(cat.id)}
-                        className="text-red-600 hover:text-red-700 text-sm"
+                        className='text-red-600 hover:text-red-700 text-sm'
                       >
                         删除
                       </button>
@@ -355,25 +374,30 @@ export default function CategoriesPage() {
           </div>
 
           {/* 二级分类映射 */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+          <div className='bg-white shadow rounded-lg'>
+            <div className='px-4 py-5 sm:p-6'>
+              <h3 className='text-lg leading-6 font-medium text-gray-900 mb-4'>
                 二级分类映射
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                二级分类从 API 自动创建，将二级分类映射到一级分类后，批量更新视频的一级分类
+              <p className='text-sm text-gray-500 mb-4'>
+                二级分类从 API
+                自动创建，将二级分类映射到一级分类后，批量更新视频的一级分类
               </p>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className='mb-4'>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
                   选择一级分类进行批量更新
                 </label>
                 <select
                   value={selectedCategoryId || ''}
-                  onChange={(e) => setSelectedCategoryId(e.target.value ? parseInt(e.target.value) : null)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  onChange={(e) =>
+                    setSelectedCategoryId(
+                      e.target.value ? parseInt(e.target.value) : null,
+                    )
+                  }
+                  className='block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm'
                 >
-                  <option value="">请选择一级分类</option>
+                  <option value=''>请选择一级分类</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
@@ -391,24 +415,28 @@ export default function CategoriesPage() {
                 </button>
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">当前二级分类</h4>
-                <div className="space-y-2">
+              <div className='border-t pt-4'>
+                <h4 className='text-sm font-medium text-gray-700 mb-3'>
+                  当前二级分类
+                </h4>
+                <div className='space-y-2'>
                   {subCategories.map((sc) => (
                     <div
                       key={sc.id}
-                      className="flex items-center justify-between p-2 border rounded-md"
+                      className='flex items-center justify-between p-2 border rounded-md'
                     >
-                      <span className="text-sm">{sc.name}</span>
+                      <span className='text-sm'>{sc.name}</span>
                       <select
                         value={sc.category_id || ''}
                         onChange={(e) => {
-                          const categoryId = e.target.value ? parseInt(e.target.value) : 0;
+                          const categoryId = e.target.value
+                            ? parseInt(e.target.value)
+                            : 0;
                           handleUpdateSubCategoryMapping(sc.id, categoryId);
                         }}
-                        className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className='px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500'
                       >
-                        <option value="">未映射</option>
+                        <option value=''>未映射</option>
                         {categories.map((cat) => (
                           <option key={cat.id} value={cat.id}>
                             {cat.name}
