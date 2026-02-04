@@ -118,6 +118,38 @@ export default function AdminPage() {
     }
   };
 
+  const handleResetSyncStatus = async () => {
+    const confirmed = window.confirm(
+      '重置同步状态\n\n' +
+      '这将把同步状态重置为"空闲"，不会影响任何数据。\n\n' +
+      '仅在同步状态异常时使用此功能。\n\n' +
+      '确定要重置吗？'
+    );
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch('/api/admin/reset-sync-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        alert('同步状态已重置');
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(`重置失败: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('重置同步状态失败:', error);
+      alert('重置失败');
+    }
+  };
+
   const handleReset = async () => {
     const confirmed = window.confirm(
       '⚠️ 警告：重置数据库\n\n' +
@@ -343,6 +375,14 @@ export default function AdminPage() {
                 >
                   增量同步（24小时）
                 </button>
+                {syncStatus?.is_syncing && (
+                  <button
+                    onClick={handleResetSyncStatus}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    重置同步状态
+                  </button>
+                )}
               </div>
             </div>
           </div>

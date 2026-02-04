@@ -4,6 +4,9 @@ import { verifyApiKey } from '@/lib/auth';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { logApiCall, getRequestParams, getUserAgent, createPerformanceMonitor } from '@/lib/api-logger';
 
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic'; // 搜索类接口不建议缓存
+
 export async function GET(request: Request) {
   const startTime = Date.now();
   const performanceMonitor = createPerformanceMonitor(startTime);
