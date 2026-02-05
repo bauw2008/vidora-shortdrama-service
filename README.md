@@ -101,15 +101,14 @@ curl -X POST http://localhost:3000/api/admin/sync \
 ### 分类系统
 
 - **一级分类**：管理后台自定义（如"都市短剧"、"玄幻短剧"）
-  - **重要**：一级分类仅用于归类和导航，不参与数据筛选
-  - 数据库中 `category_id` 字段为空，不会根据一级分类筛选视频
-- **二级分类**：从 API 的 `vod_class` 字段自动提取（如"男频"、"都市"、"马甲"）
-  - **重要**：实际数据筛选使用 `sub_category_id` 字段
-  - 调用 `/api/list` 时应传递 `subCategoryId` 参数，而不是 `categoryId`
-- **标签**：保存所有标签到 `tags` 字段
+  - 用于归类和导航，通过批量更新将视频归类到一级分类
+- **二级分类**：从 API 的 `vod_class` 字段自动提取并保存到 `tags` 字段
+  - 实际数据筛选使用 `tags` 字段，支持多标签匹配
+  - 一个视频可以包含多个标签，可以同时属于多个二级分类
+- **标签**：保存所有标签到 `tags` 字段（JSONB 数组）
 
 **为什么这样设计？**
-源 API 可能包含 50+ 个分类，直接展示给用户会过于混乱。一级分类提供了直观的归类方式（如"欢喜宠"、"都市"等），让用户更容易找到内容。实际筛选时使用二级分类确保数据准确性。
+源 API 可能包含 50+ 个分类，直接展示给用户会过于混乱。一级分类提供了直观的归类方式，让用户更容易找到内容。使用 `tags` 字段进行筛选，一个视频可以同时包含多个标签，更符合实际使用场景。
 
 ### 视频数据
 
@@ -118,7 +117,6 @@ curl -X POST http://localhost:3000/api/admin/sync \
   vod_id: number;
   name: string;
   category_id: number;
-  sub_category_id?: number;
   tags: string[];
   episode_count: number;
   cover: string;

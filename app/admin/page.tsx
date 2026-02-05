@@ -193,8 +193,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    // 移除自动刷新以减少 API 请求
+    // const interval = setInterval(fetchData, 5000);
+    // return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {
