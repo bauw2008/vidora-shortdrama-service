@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 interface RateLimitConfig {
   rate_limit_minute: number;
@@ -17,13 +17,13 @@ interface RateLimitCheck {
 
 // 获取 IP 地址
 export function getClientIp(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  const remoteAddr = request.headers.get('remote-addr');
+  const forwarded = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const remoteAddr = request.headers.get("remote-addr");
 
   if (forwarded) {
     // 取第一个 IP（客户端真实 IP）
-    return forwarded.split(',')[0].trim();
+    return forwarded.split(",")[0].trim();
   }
   if (realIp) {
     return realIp;
@@ -31,20 +31,20 @@ export function getClientIp(request: Request): string {
   if (remoteAddr) {
     return remoteAddr;
   }
-  return 'unknown';
+  return "unknown";
 }
 
 // 检查 IP 黑名单
 export async function checkIpBlacklist(ip: string): Promise<boolean> {
   try {
     const { data, error } = await supabase
-      .from('ip_blacklist')
-      .select('id')
-      .eq('ip_address', ip)
+      .from("ip_blacklist")
+      .select("id")
+      .eq("ip_address", ip)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('检查 IP 黑名单失败:', error);
+    if (error && error.code !== "PGRST116") {
+      console.error("检查 IP 黑名单失败:", error);
     }
 
     return !!data;
@@ -56,27 +56,27 @@ export async function checkIpBlacklist(ip: string): Promise<boolean> {
 // 添加 IP 到黑名单
 export async function addToBlacklist(
   ip: string,
-  reason: string = '',
+  reason: string = "",
 ): Promise<void> {
   await supabase
-    .from('ip_blacklist')
-    .upsert({ ip_address: ip, reason }, { onConflict: 'ip_address' });
+    .from("ip_blacklist")
+    .upsert({ ip_address: ip, reason }, { onConflict: "ip_address" });
 }
 
 // 获取速率限制配置
 export async function getRateLimitConfig(): Promise<RateLimitConfig | null> {
   try {
     const { data, error } = await supabase
-      .from('api_config')
+      .from("api_config")
       .select(
-        'rate_limit_minute, rate_limit_hourly, rate_limit_daily, auth_enabled',
+        "rate_limit_minute, rate_limit_hourly, rate_limit_daily, auth_enabled",
       )
-      .order('id', { ascending: true })
+      .order("id", { ascending: true })
       .limit(1)
       .single();
 
     if (error) {
-      console.error('获取速率限制配置失败:', error);
+      console.error("获取速率限制配置失败:", error);
       return null;
     }
 
@@ -89,7 +89,7 @@ export async function getRateLimitConfig(): Promise<RateLimitConfig | null> {
 // 检查并记录速率限制
 export async function checkAndRecordRateLimit(
   identifier: string,
-  type: 'ip' | 'apikey',
+  type: "ip" | "apikey",
   config: RateLimitConfig,
 ): Promise<RateLimitCheck> {
   const now = new Date();
@@ -124,10 +124,10 @@ export async function checkAndRecordRateLimit(
   try {
     // 检查现有记录
     const { data: existing } = await supabase
-      .from('api_rate_limits')
-      .select('*')
-      .eq('identifier', identifier)
-      .eq('type', type)
+      .from("api_rate_limits")
+      .select("*")
+      .eq("identifier", identifier)
+      .eq("type", type)
       .single();
 
     let minuteCount = 0;
@@ -146,7 +146,7 @@ export async function checkAndRecordRateLimit(
 
       // 更新记录
       await supabase
-        .from('api_rate_limits')
+        .from("api_rate_limits")
         .update({
           minute_count: minuteCount + 1,
           hourly_count: hourlyCount + 1,
@@ -155,10 +155,10 @@ export async function checkAndRecordRateLimit(
           hour_window: hourWindow.toISOString(),
           day_window: dayWindow.toISOString(),
         })
-        .eq('id', existing.id);
+        .eq("id", existing.id);
     } else {
       // 创建新记录
-      await supabase.from('api_rate_limits').insert({
+      await supabase.from("api_rate_limits").insert({
         identifier,
         type,
         minute_count: 1,
@@ -206,7 +206,7 @@ export async function checkAndRecordRateLimit(
       remaining_daily: config.rate_limit_daily - dailyCount,
     };
   } catch (error) {
-    console.error('速率限制检查失败:', error);
+    console.error("速率限制检查失败:", error);
     // 检查失败时，允许访问（避免服务不可用）
     return {
       success: true,
@@ -234,10 +234,10 @@ export async function checkRateLimit(
   if (await checkIpBlacklist(ip)) {
     return {
       success: false,
-      error: 'IP 地址已被封禁',
+      error: "IP 地址已被封禁",
     };
   }
 
   // 检查 IP 速率限制（始终生效，不受认证开关影响）
-  return await checkAndRecordRateLimit(ip, 'ip', config);
+  return await checkAndRecordRateLimit(ip, "ip", config);
 }

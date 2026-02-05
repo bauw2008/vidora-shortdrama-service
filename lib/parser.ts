@@ -1,5 +1,5 @@
-import { getOrCreateSubCategory } from './db/operations';
-import type { VideoData, PlayUrl } from './db/operations';
+import { getOrCreateSubCategory } from "./db/operations";
+import type { VideoData, PlayUrl } from "./db/operations";
 
 // ============================================
 // API 数据类型定义
@@ -104,14 +104,14 @@ export async function parseVideoDetail(
 ): Promise<VideoData> {
   // 1. 解析标签（vod_class 可能包含多个标签，逗号分隔）
   // 处理 vod_class 为空、null、undefined 的情况
-  const vodClass = apiData.vod_class || '';
+  const vodClass = apiData.vod_class || "";
   const tags = vodClass
-    .split(',')
+    .split(",")
     .map((t) => t.trim())
     .filter((t) => t.length > 0);
 
   // 2. 第一个标签作为二级分类，如果没有则使用"其他"
-  const primaryTag = tags[0] || '其他';
+  const primaryTag = tags[0] || "其他";
   const subCategory = await getOrCreateSubCategory(primaryTag);
 
   // 3. 解析播放URL
@@ -119,7 +119,7 @@ export async function parseVideoDetail(
 
   // 4. 清理简介（优先使用 vod_blurb，如果没有则使用 vod_content）
   const description = stripHtmlTags(
-    apiData.vod_blurb || apiData.vod_content || '',
+    apiData.vod_blurb || apiData.vod_content || "",
   );
 
   return {
@@ -134,13 +134,13 @@ export async function parseVideoDetail(
     play_urls: playUrls,
 
     // 元数据字段
-    actor: apiData.vod_actor || '',
-    director: apiData.vod_director || '',
-    writer: apiData.vod_writer || '',
-    area: apiData.vod_area || '',
-    lang: apiData.vod_lang || '',
-    year: apiData.vod_year || '',
-    remarks: apiData.vod_remarks || '',
+    actor: apiData.vod_actor || "",
+    director: apiData.vod_director || "",
+    writer: apiData.vod_writer || "",
+    area: apiData.vod_area || "",
+    lang: apiData.vod_lang || "",
+    year: apiData.vod_year || "",
+    remarks: apiData.vod_remarks || "",
 
     // 热度数据
     hits: apiData.vod_hits || 0,
@@ -171,12 +171,12 @@ export function parsePlayUrls(vodPlayUrl: string): PlayUrl[] {
 
   // 格式: "01$url#02$url#03$url"
   return vodPlayUrl
-    .split('#')
+    .split("#")
     .map((item) => {
-      const parts = item.split('$');
+      const parts = item.split("$");
       if (parts.length >= 2) {
         const episode = parseInt(parts[0]) || 0;
-        const url = parts[1] || '';
+        const url = parts[1] || "";
         if (url.length > 0) {
           return { episode, url };
         }
@@ -194,23 +194,23 @@ export function stripHtmlTags(html: string): string {
   let result = html;
 
   // 移除所有 HTML 标签
-  result = result.replace(/<[^>]*>/g, '');
+  result = result.replace(/<[^>]*>/g, "");
 
   // 循环解码 HTML 实体，直到没有 &amp; 为止（处理多重编码）
-  while (result.includes('&amp;')) {
-    result = result.replace(/&amp;/g, '&');
+  while (result.includes("&amp;")) {
+    result = result.replace(/&amp;/g, "&");
   }
 
   // 解码其他 HTML 实体
   result = result
-    .replace(/&nbsp;/g, ' ')
+    .replace(/&nbsp;/g, " ")
     .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
     .replace(/&apos;/g, "'");
 
   // 压缩空白字符并去除首尾空白
-  return result.replace(/\s+/g, ' ').trim();
+  return result.replace(/\s+/g, " ").trim();
 }
 
 // ============================================

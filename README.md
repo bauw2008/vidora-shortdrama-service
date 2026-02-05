@@ -49,21 +49,21 @@ pnpm dev
 
 ### 公开 API
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/health` | GET | 健康检查 |
-| `/api/categories` | GET | 获取分类列表 |
-| `/api/list` | GET | 获取视频列表（分页） |
-| `/api/search` | GET | 搜索视频 |
-| `/api/detail/[id]` | GET | 获取视频详情 |
-| `/api/play/[id]/[episode]` | GET | 获取播放链接 |
+| 端点                       | 方法 | 说明                 |
+| -------------------------- | ---- | -------------------- |
+| `/api/health`              | GET  | 健康检查             |
+| `/api/categories`          | GET  | 获取分类列表         |
+| `/api/list`                | GET  | 获取视频列表（分页） |
+| `/api/search`              | GET  | 搜索视频             |
+| `/api/detail/[id]`         | GET  | 获取视频详情         |
+| `/api/play/[id]/[episode]` | GET  | 获取播放链接         |
 
 ### 管理 API（需要 API Key）
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/admin/sync` | GET | 获取同步状态 |
-| `/api/admin/sync` | POST | 触发同步 |
+| 端点              | 方法 | 说明         |
+| ----------------- | ---- | ------------ |
+| `/api/admin/sync` | GET  | 获取同步状态 |
+| `/api/admin/sync` | POST | 触发同步     |
 
 ### API 使用示例
 
@@ -101,8 +101,15 @@ curl -X POST http://localhost:3000/api/admin/sync \
 ### 分类系统
 
 - **一级分类**：管理后台自定义（如"都市短剧"、"玄幻短剧"）
+  - **重要**：一级分类仅用于归类和导航，不参与数据筛选
+  - 数据库中 `category_id` 字段为空，不会根据一级分类筛选视频
 - **二级分类**：从 API 的 `vod_class` 字段自动提取（如"男频"、"都市"、"马甲"）
+  - **重要**：实际数据筛选使用 `sub_category_id` 字段
+  - 调用 `/api/list` 时应传递 `subCategoryId` 参数，而不是 `categoryId`
 - **标签**：保存所有标签到 `tags` 字段
+
+**为什么这样设计？**
+源 API 可能包含 50+ 个分类，直接展示给用户会过于混乱。一级分类提供了直观的归类方式（如"欢喜宠"、"都市"等），让用户更容易找到内容。实际筛选时使用二级分类确保数据准确性。
 
 ### 视频数据
 

@@ -294,7 +294,7 @@ BEGIN
   WHERE hour_window < NOW() - INTERVAL '2 hours'
      OR day_window < NOW() - INTERVAL '2 days';
 END;
-$$ language 'plpgsql';
+$$ language 'plpgsql' SECURITY DEFINER SET search_path = public;
 
 -- ============================================
 -- 行级安全策略 (RLS)
@@ -348,6 +348,7 @@ CREATE POLICY "Public read api_logs" ON api_logs
   FOR SELECT USING (true);
 
 -- 写入策略（需要通过 API Key 验证，这里暂时允许所有写入，实际应用中应该更严格）
+-- 注意：使用 USING (true) 允许所有认证用户写入，权限控制在应用层通过 API Key 验证实现
 CREATE POLICY "Service write categories" ON categories
   FOR ALL USING (true);
 
@@ -392,7 +393,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ language 'plpgsql' SECURITY DEFINER SET search_path = public;
 
 -- 创建触发器
 CREATE TRIGGER update_sync_status_updated_at
@@ -429,3 +430,55 @@ CREATE TRIGGER update_ip_blacklist_updated_at
   BEFORE UPDATE ON ip_blacklist
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 统计函数
+-- ============================================
+
+-- 创建获取表记录总数的通用函数
+CREATE OR REPLACE FUNCTION get_table_count(table_name TEXT, filter TEXT DEFAULT '')
+RETURNS INTEGER AS $$
+DECLARE
+  query TEXT;
+  result INTEGER;
+BEGIN
+  query := 'SELECT COUNT(*) FROM ' || quote_ident(table_name);
+  
+  IF filter IS NOT NULL AND filter != '' THEN
+    query := query || ' WHERE ' || filter;
+  END IF;
+  
+  EXECUTE query INTO result;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 创建获取视频总数的函数
+CREATE OR REPLACE FUNCTION get_videos_count()
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (SELECT COUNT(*) FROM videos);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 创建获取今日更新数量的函数
+CREATE OR REPLACE FUNCTION get_today_updated_count()
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (SELECT COUNT(*) FROM videos WHERE DATE(synced_at) = CURRENT_DATE);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 创建获取过滤后视频数量的函数（用于分页）
+CREATE OR REPLACE FUNCTION get_filtered_videos_count(p_category_id INTEGER DEFAULT NULL, p_sub_category_id INTEGER DEFAULT NULL)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*) FROM videos
+    WHERE
+      (p_category_id IS NULL OR category_id = p_category_id)
+      AND
+      (p_sub_category_id IS NULL OR sub_category_id = p_sub_category_id)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

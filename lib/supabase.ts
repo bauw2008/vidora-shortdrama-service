@@ -1,16 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  throw new Error("Missing Supabase environment variables");
 }
 
 // 用于 Node.js 服务端环境（普通 API 路由）
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
-    headers: { Connection: 'keep-alive' },
+    headers: { Connection: "keep-alive" },
     fetch: (url, options = {}) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
@@ -21,7 +21,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       })
         .finally(() => clearTimeout(timeoutId))
         .catch((error) => {
-          console.error('Supabase fetch error:', error);
+          console.error("Supabase fetch error:", error);
           throw error;
         });
     },
@@ -32,7 +32,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export function createEdgeClient() {
   return createClient(supabaseUrl, supabaseAnonKey, {
     global: {
-      headers: { Connection: 'keep-alive' },
+      headers: { Connection: "keep-alive" },
       fetch: (url, options = {}) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 20000); // Edge 环境 20秒超时
@@ -43,13 +43,13 @@ export function createEdgeClient() {
         })
           .finally(() => clearTimeout(timeoutId))
           .catch((error) => {
-            console.error('Supabase Edge fetch error:', error);
+            console.error("Supabase Edge fetch error:", error);
             throw error;
           });
       },
     },
     db: {
-      schema: 'public',
+      schema: "public",
     },
   });
 }

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 interface ApiLogData {
   ip_address: string;
@@ -114,35 +114,36 @@ export async function logApiCall(data: ApiLogData): Promise<void> {
   try {
     // 获取配置的时区
     const { data: apiConfig } = await supabase
-      .from('api_config')
-      .select('timezone')
-      .order('id', { ascending: true })
+      .from("api_config")
+      .select("timezone")
+      .order("id", { ascending: true })
       .limit(1)
       .single();
 
-    const timezone = apiConfig?.timezone || 'Asia/Shanghai';
+    const timezone = apiConfig?.timezone || "Asia/Shanghai";
 
     // 使用 Intl API 获取指定时区的当前时间
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
       hour12: false,
     });
     const parts = formatter.formatToParts(now);
-    const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
-    const localDate = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
-    const localTime = `${getPart('hour')}:${getPart('minute')}:${getPart('second')}`;
+    const getPart = (type: string) =>
+      parts.find((p) => p.type === type)?.value || "";
+    const localDate = `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+    const localTime = `${getPart("hour")}:${getPart("minute")}:${getPart("second")}`;
 
     // 直接存储为本地时区时间（不带时区信息）
     const request_time = `${localDate} ${localTime}`;
 
-    await supabase.from('api_logs').insert({
+    await supabase.from("api_logs").insert({
       ip_address: data.ip_address,
       api_endpoint: data.api_endpoint,
       http_method: data.http_method,
@@ -160,7 +161,7 @@ export async function logApiCall(data: ApiLogData): Promise<void> {
     });
   } catch (error) {
     // 日志记录失败不影响主业务
-    console.error('API 日志记录失败:', error);
+    console.error("API 日志记录失败:", error);
   }
 }
 
@@ -172,9 +173,9 @@ export function getRequestParams(request: Request): string {
     const url = new URL(request.url);
     const params = url.searchParams.toString();
     // 隐藏敏感信息（如 API Key）
-    return params.replace(/api_key=[^&]+/g, 'api_key=***');
+    return params.replace(/api_key=[^&]+/g, "api_key=***");
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -182,7 +183,7 @@ export function getRequestParams(request: Request): string {
  * 获取 User-Agent
  */
 export function getUserAgent(request: Request): string {
-  return request.headers.get('user-agent') || '';
+  return request.headers.get("user-agent") || "";
 }
 
 /**
@@ -202,35 +203,36 @@ export async function forceLogApiCall(data: ApiLogData): Promise<void> {
   try {
     // 获取配置的时区
     const { data: apiConfig } = await supabase
-      .from('api_config')
-      .select('timezone')
-      .order('id', { ascending: true })
+      .from("api_config")
+      .select("timezone")
+      .order("id", { ascending: true })
       .limit(1)
       .single();
 
-    const timezone = apiConfig?.timezone || 'Asia/Shanghai';
+    const timezone = apiConfig?.timezone || "Asia/Shanghai";
 
     // 使用 Intl API 获取指定时区的当前时间
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
       hour12: false,
     });
     const parts = formatter.formatToParts(now);
-    const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
-    const localDate = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
-    const localTime = `${getPart('hour')}:${getPart('minute')}:${getPart('second')}`;
+    const getPart = (type: string) =>
+      parts.find((p) => p.type === type)?.value || "";
+    const localDate = `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+    const localTime = `${getPart("hour")}:${getPart("minute")}:${getPart("second")}`;
 
     // 直接存储为本地时区时间（不带时区信息）
     const request_time = `${localDate} ${localTime}`;
 
-    await supabase.from('api_logs').insert({
+    await supabase.from("api_logs").insert({
       ip_address: data.ip_address,
       api_endpoint: data.api_endpoint,
       http_method: data.http_method,
@@ -247,6 +249,6 @@ export async function forceLogApiCall(data: ApiLogData): Promise<void> {
       request_time,
     });
   } catch (error) {
-    console.error('API 日志记录失败:', error);
+    console.error("API 日志记录失败:", error);
   }
 }

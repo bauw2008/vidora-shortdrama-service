@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -14,9 +14,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     // 检查 localStorage 中是否有 token
-    const token = localStorage.getItem('admin_token');
+    const token = localStorage.getItem("admin_token");
     if (!token) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
@@ -27,7 +27,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         setIsAuthenticated(true);
       }
     } catch {
-      router.push('/login');
+      router.push("/login");
     }
 
     setIsLoading(false);
@@ -35,8 +35,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   if (isLoading) {
     return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='text-gray-500'>加载中...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-500">加载中...</div>
       </div>
     );
   }

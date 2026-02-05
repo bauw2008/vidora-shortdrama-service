@@ -1,0 +1,86 @@
+name: 数据同步
+
+on:
+  # 手动触发同步
+  workflow_dispatch:
+    inputs:
+      sync_type:
+        description: '同步类型'
+        required: true
+        type: choice
+        options:
+          - full
+          - incremental
+          - resync
+      hours:
+        description: '增量同步时间范围（小时）'
+        required: false
+        type: number
+        default: 24
+
+  # 定时检查同步请求
+  schedule:
+    - cron: '*/5 * * * *'  # 每5分钟检查一次
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 安装依赖
+        run: pnpm install
+
+      - name: 检查同步状态
+        id: check
+        run: |
+          # 检查 sync_status 表是否有新的同步请求
+          echo "检查同步状态..."
+          
+          # 这里可以添加从数据库读取 sync_status 的逻辑
+          # 简化处理：直接执行同步（实际应该检查 sync_status 表）
+          SYNC_STATUS="idle"
+          SYNC_TYPE="incremental"
+          
+          echo "sync_status=$SYNC_STATUS" >> $GITHUB_OUTPUT
+          echo "sync_type=$SYNC_TYPE" >> $GITHUB_OUTPUT
+
+      - name: 执行同步
+        if: steps.check.outputs.sync_status == 'pending'
+        run: |
+          SYNC_TYPE="${{ steps.check.outputs.sync_type }}"
+          HOURS="24"
+          
+          echo "执行同步: type=$SYNC_TYPE, hours=$HOURS"
+          
+          # 执行同步脚本
+          pnpm run sync:$SYNC_TYPE $HOURS || exit 1
+
+      - name: 手动触发同步
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          SYNC_TYPE="${{ github.event.inputs.sync_type }}"
+          HOURS="${{ github.event.inputs.hours }}"
+          
+          echo "手动执行同步: type=$SYNC_TYPE, hours=$HOURS"
+          
+          # 执行同步脚本
+          pnpm run sync:$SYNC_TYPE $HOURS || exit 1
+
+      - name: 同步完成通知
+        if: success()
+        run: echo "✅ 同步完成"
+
+      - name: 同步失败通知
+        if: failure()
+        run: echo "❌ 同步失败"

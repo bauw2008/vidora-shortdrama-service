@@ -1,10 +1,10 @@
-import axios, { AxiosError } from 'axios';
-import { getActiveApiSource } from './db/operations';
+import axios, { AxiosError } from "axios";
+import { getActiveApiSource } from "./db/operations";
 import type {
   ApiListResponse,
   ApiDetailResponse,
   ApiVideoDetail,
-} from './parser';
+} from "./parser";
 
 // ============================================
 // 配置
@@ -12,28 +12,28 @@ import type {
 
 const TIMEOUT = 15000;
 const MIN_REQUEST_INTERVAL = 800; // 最小请求间隔（毫秒）- 稍微增加安全性
-const DEFAULT_API_URL = 'https://api.wwzy.tv/api.php/provide/vod/';
+const DEFAULT_API_URL = "https://api.wwzy.tv/api.php/provide/vod/";
 
 // 随机 User-Agent 列表（增加更多真实浏览器 UA）
 const USER_AGENTS = [
   // Chrome Windows
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
   // Firefox Windows
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0',
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0",
   // Chrome Mac
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
   // Safari Mac
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
   // Edge Windows
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0",
 ];
 
 // ============================================
@@ -93,7 +93,7 @@ class ApiClient {
         return this.apiUrl;
       }
     } catch (error) {
-      console.warn('[API] 从数据库获取 API 源失败，使用默认 URL');
+      console.warn("[API] 从数据库获取 API 源失败，使用默认 URL");
     }
 
     // 如果数据库获取失败，使用默认 URL
@@ -114,17 +114,17 @@ class ApiClient {
       const response = await axios.get<T>(url, {
         timeout: TIMEOUT,
         headers: {
-          'User-Agent': this.getRandomUserAgent(),
-          Accept: 'application/json, text/plain, */*',
-          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br',
-          Connection: 'keep-alive',
-          Referer: 'https://api.wwzy.tv/',
-          'Cache-Control': 'no-cache',
-          Pragma: 'no-cache',
-          'Sec-Fetch-Dest': 'empty',
-          'Sec-Fetch-Mode': 'cors',
-          'Sec-Fetch-Site': 'same-site',
+          "User-Agent": this.getRandomUserAgent(),
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br",
+          Connection: "keep-alive",
+          Referer: "https://api.wwzy.tv/",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-site",
         },
       });
 
@@ -175,13 +175,13 @@ class ApiClient {
   ): Promise<ApiListResponse> {
     const apiUrl = await this.getApiUrl();
     const params = new URLSearchParams({
-      ac: 'videolist',
+      ac: "videolist",
       pg: page.toString(),
       pagesize: size.toString(),
     });
 
     if (categoryId) {
-      params.append('t', categoryId.toString());
+      params.append("t", categoryId.toString());
     }
 
     const url = `${apiUrl}?${params.toString()}`;
@@ -217,7 +217,7 @@ class ApiClient {
 
     for (let i = 0; i < ids.length; i += batchSize) {
       const batchIds = ids.slice(i, i + batchSize);
-      const url = `${apiUrl}?ac=detail&ids=${batchIds.join(',')}`;
+      const url = `${apiUrl}?ac=detail&ids=${batchIds.join(",")}`;
       console.log(`[API] 批量获取视频详情: ${url} (${batchIds.length} 个)`);
 
       const response = await this.fetch<ApiDetailResponse>(url);
@@ -241,7 +241,7 @@ class ApiClient {
   async search(keyword: string, page: number = 1): Promise<ApiListResponse> {
     const apiUrl = await this.getApiUrl();
     const params = new URLSearchParams({
-      ac: 'list',
+      ac: "list",
       wd: keyword,
       pg: page.toString(),
     });
