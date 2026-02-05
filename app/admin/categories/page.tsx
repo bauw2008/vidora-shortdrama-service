@@ -25,6 +25,9 @@ export default function CategoriesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
+  const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<number[]>(
+    [],
+  );
 
   // 添加分类相关状态
   const [showAddForm, setShowAddForm] = useState(false);
@@ -164,17 +167,47 @@ export default function CategoriesPage() {
       return;
     }
 
-    const selectedSubCategories = subCategories.filter(
-      (sc) => sc.category_id === selectedCategoryId,
-    );
-
-    if (selectedSubCategories.length === 0) {
-      alert("该一级分类下没有映射的二级分类");
+    if (selectedSubCategoryIds.length === 0) {
+      alert("请至少选择一个二级分类");
       return;
     }
 
     try {
       const token = localStorage.getItem("admin_token");
+      
+      // 先预览将要更新的视频
+      const previewRes = await fetch(
+        `/api/admin/preview-batch-update-category?categoryId=${selectedCategoryId}&subCategoryIds=${selectedSubCategoryIds.join(",")}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!previewRes.ok) {
+        alert("预览失败");
+        return;
+      }
+
+      const previewData = await previewRes.json();
+      const { count, sampleVideos, tagNames } = previewData.data;
+
+      if (count === 0) {
+        alert("没有找到匹配的视频");
+        return;
+      }
+
+      // 显示确认对话框
+      const sampleNames = sampleVideos.slice(0, 3).map((v: any) => v.name).join("、");
+      const confirmed = confirm(
+        `即将更新 ${count} 个视频的分类为「${categories.find(c => c.id === selectedCategoryId)?.name}」\n` +
+        `选中的标签：${tagNames.join("、")}\n` +
+        `示例视频：${sampleNames}${sampleVideos.length > 3 ? "..." : ""}\n\n` +
+        `确定要继续吗？`
+      );
+
+      if (!confirmed) return;
+
+      // 执行批量更新
       const res = await fetch("/api/admin/videos/batch-update-category", {
         method: "POST",
         headers: {
@@ -183,12 +216,16 @@ export default function CategoriesPage() {
         },
         body: JSON.stringify({
           categoryId: selectedCategoryId,
+          subCategoryIds: selectedSubCategoryIds,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
         alert(`成功更新 ${data.data.count} 个视频`);
+      } else {
+        const errorData = await res.json();
+        alert(`更新失败: ${errorData.error}`);
       }
     } catch (error) {
       console.error("批量更新失败:", error);
@@ -377,16 +414,15 @@ export default function CategoriesPage() {
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                二级分类映射
+                批量更新视频分类
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                二级分类从 API
-                自动创建，将二级分类映射到一级分类后，批量更新视频的一级分类
+                选择一级分类和二级分类标签，将包含这些标签的所有视频批量更新到指定的一级分类。
               </p>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  选择一级分类进行批量更新
+                  选择一级分类（目标分类）
                 </label>
                 <select
                   value={selectedCategoryId || ""}
@@ -404,48 +440,104 @@ export default function CategoriesPage() {
                     </option>
                   ))}
                 </select>
-                <button
-                  onClick={handleBatchUpdate}
-                  disabled={!selectedCategoryId}
-                  className={`mt-2 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 ${
-                    !selectedCategoryId ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  批量更新视频分类
-                </button>
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  当前二级分类
-                </h4>
-                <div className="space-y-2">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  选择二级分类标签（多选，用于筛选视频）
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md">
                   {subCategories.map((sc) => (
-                    <div
+                    <label
                       key={sc.id}
-                      className="flex items-center justify-between p-2 border rounded-md"
+                      className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
                     >
-                      <span className="text-sm">{sc.name}</span>
-                      <select
-                        value={sc.category_id || ""}
+                      <input
+                        type="checkbox"
+                        checked={selectedSubCategoryIds.includes(sc.id)}
                         onChange={(e) => {
-                          const categoryId = e.target.value
-                            ? parseInt(e.target.value)
-                            : 0;
-                          handleUpdateSubCategoryMapping(sc.id, categoryId);
+                          if (e.target.checked) {
+                            setSelectedSubCategoryIds([...selectedSubCategoryIds, sc.id]);
+                          } else {
+                            setSelectedSubCategoryIds(
+                              selectedSubCategoryIds.filter((id) => id !== sc.id),
+                            );
+                          }
                         }}
-                        className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="">未映射</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm">{sc.name}</span>
+                      {sc.category_id && (
+                        <span className="text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
+                          → {categories.find((c) => c.id === sc.category_id)?.name}
+                        </span>
+                      )}
+                    </label>
                   ))}
                 </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    已选择 {selectedSubCategoryIds.length} 个二级分类
+                  </span>
+                  <button
+                    onClick={() => setSelectedSubCategoryIds([])}
+                    className="text-sm text-indigo-600 hover:text-indigo-700"
+                  >
+                    清空选择
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={handleBatchUpdate}
+                disabled={!selectedCategoryId || selectedSubCategoryIds.length === 0}
+                className={`w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 ${
+                  !selectedCategoryId || selectedSubCategoryIds.length === 0
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+              >
+                批量更新视频分类
+              </button>
+            </div>
+          </div>
+
+          {/* 二级分类映射管理 */}
+          <div className="bg-white shadow rounded-lg mt-8">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                二级分类映射管理
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                将二级分类映射到一级分类，用于分类组织和管理（不影响视频显示逻辑）。
+              </p>
+
+              <div className="space-y-2">
+                {subCategories.map((sc) => (
+                  <div
+                    key={sc.id}
+                    className="flex items-center justify-between p-2 border rounded-md"
+                  >
+                    <span className="text-sm">{sc.name}</span>
+                    <select
+                      value={sc.category_id || ""}
+                      onChange={(e) => {
+                        const categoryId = e.target.value
+                          ? parseInt(e.target.value)
+                          : 0;
+                        handleUpdateSubCategoryMapping(sc.id, categoryId);
+                      }}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="">未映射</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

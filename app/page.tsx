@@ -106,8 +106,21 @@ export default function HomePage() {
             <div className="bg-gray-50 rounded p-4">
               <p className="text-sm text-gray-500 mb-2">请求示例 (curl):</p>
               <p className="text-xs font-mono text-gray-700 break-all whitespace-pre-wrap">
-                {`curl -H "Authorization: Bearer YOUR_API_KEY" \\
-     "${baseUrl}/api/list?page=1&pageSize=20"`}
+                {`# 查询所有视频
+curl -H "Authorization: Bearer YOUR_API_KEY" \\
+     "${baseUrl}/api/list?page=1&pageSize=20"
+
+# 按一级分类查询
+curl -H "Authorization: Bearer YOUR_API_KEY" \\
+     "${baseUrl}/api/list?categoryId=1&page=1&pageSize=20"
+
+# 按二级分类查询（通过标签筛选）
+curl -H "Authorization: Bearer YOUR_API_KEY" \\
+     "${baseUrl}/api/list?subCategoryId=2&page=1&pageSize=20"
+
+# 组合查询
+curl -H "Authorization: Bearer YOUR_API_KEY" \\
+     "${baseUrl}/api/list?categoryId=1&subCategoryId=2&page=1&pageSize=20"`}
               </p>
             </div>
           </div>
@@ -230,7 +243,7 @@ export default function HomePage() {
                 <li>• vod_id - 视频 ID</li>
                 <li>• name - 片名</li>
                 <li>• category_id - 一级分类 ID</li>
-                <li>• sub_category_id - 二级分类 ID</li>
+                
                 <li>• tags - 标签数组</li>
                 <li>• episode_count - 总集数</li>
                 <li>• cover - 海报图片</li>

@@ -126,7 +126,6 @@ export async function parseVideoDetail(
     vod_id: apiData.vod_id,
     name: apiData.vod_name,
     category_id: defaultCategoryId, // 默认为 null，表示未分配一级分类
-    sub_category_id: subCategory.id,
     tags: tags,
     episode_count: apiData.vod_total || 0,
     cover: apiData.vod_pic,

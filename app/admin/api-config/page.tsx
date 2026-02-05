@@ -211,10 +211,15 @@ API Key: ${data.data.api_key}
       });
 
       if (res.ok) {
-        console.log("时区已更新为:", config.timezone);
+        alert(`时区已更新为: ${config.timezone}`);
+        fetchConfig();
+      } else {
+        const data = await res.json();
+        alert(`更新失败: ${data.error}`);
       }
     } catch (error) {
       console.error("更新时区失败:", error);
+      alert("更新时区失败");
     }
   };
 

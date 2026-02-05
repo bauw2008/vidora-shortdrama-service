@@ -9,25 +9,40 @@ function getHeaders(supabaseKey) {
 
 // 使用 RPC 获取过滤后的 count，避免 EdgeOne Pages fetch 头部解析问题
 async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, subCategoryId) {
-  const url = `${supabaseUrl}/rest/v1/rpc/get_filtered_videos_count`;
-  const params = {};
-  if (categoryId) params.category_id = categoryId;
-  if (subCategoryId) params.sub_category_id = subCategoryId;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: getHeaders(supabaseKey),
-    body: JSON.stringify(params)
-  });
-
-  if (!response.ok) {
-    // 如果 RPC 不存在，返回 0 或使用备用方法
-    console.log("DEBUG [getFilteredCount]: RPC failed, returning 0");
-    return 0;
+  let count = 0;
+  
+  // 构建查询
+  let filter = '';
+  if (categoryId) filter += `&category_id=eq.${categoryId}`;
+  
+  // 如果有 subCategoryId，获取二级分类名称并使用 tags 字段查询
+  if (subCategoryId) {
+    const subCategoryResponse = await fetch(
+      `${supabaseUrl}/rest/v1/sub_categories?select=name&id=eq.${subCategoryId}`,
+      { headers: getHeaders(supabaseKey) }
+    );
+    const subCategoryData = await subCategoryResponse.json();
+    const subCategory = subCategoryData?.[0];
+    
+    if (subCategory) {
+      // 使用 JSONB contains 操作符
+      // 正确的 Supabase 语法: tags=cs.["标签名"]
+      filter += `&tags=cs.["${subCategory.name}"]`;
+    }
   }
-
-  const result = await response.json();
-  return typeof result === 'number' ? result : 0;
+  
+  // 获取总数
+  const countUrl = `${supabaseUrl}/rest/v1/videos?select=id${filter}`;
+  const countResponse = await fetch(countUrl, { 
+    headers: { ...getHeaders(supabaseKey), 'Prefer': 'count=exact' } 
+  });
+  
+  const contentRange = countResponse.headers.get('content-range');
+  if (contentRange) {
+    count = parseInt(contentRange.split('/')[1]) || 0;
+  }
+  
+  return count;
 }
 
 async function select(supabaseUrl, supabaseKey, table, options = {}) {
@@ -155,6 +170,186 @@ async function getRateLimitConfig(supabaseUrl, supabaseKey) {
   }
 }
 
+// 检查并记录速率限制
+async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, type, config) {
+  const now = new Date();
+  const minuteWindow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    0,
+    0
+  );
+  const hourWindow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    0,
+    0,
+    0
+  );
+  const dayWindow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+
+  try {
+    const existing = await select(supabaseUrl, supabaseKey, "api_rate_limits", {
+      columns: "*",
+      filter: `identifier=eq.${identifier}&type=eq.${type}`,
+      single: true
+    });
+
+    let minuteCount = 0;
+    let hourlyCount = 0;
+    let dailyCount = 0;
+
+    if (existing) {
+      const isNewMinute = new Date(existing.minute_window) < minuteWindow;
+      const isNewHour = new Date(existing.hour_window) < hourWindow;
+      const isNewDay = new Date(existing.day_window) < dayWindow;
+
+      minuteCount = isNewMinute ? 0 : existing.minute_count;
+      hourlyCount = isNewHour ? 0 : existing.hourly_count;
+      dailyCount = isNewDay ? 0 : existing.daily_count;
+
+      // 先检查是否超过限制，再决定是否允许
+      if (minuteCount >= config.rate_limit_minute) {
+        return {
+          success: false,
+          error: `超过每分钟限制 (${config.rate_limit_minute} 次/分钟)`,
+          remaining_minute: 0
+        };
+      }
+      if (hourlyCount >= config.rate_limit_hourly) {
+        return {
+          success: false,
+          error: `超过每小时限制 (${config.rate_limit_hourly} 次/小时)`,
+          remaining_hourly: 0
+        };
+      }
+      if (dailyCount >= config.rate_limit_daily) {
+        return {
+          success: false,
+          error: `超过每天限制 (${config.rate_limit_daily} 次/天)`,
+          remaining_daily: 0
+        };
+      }
+
+      // 更新记录
+      await fetch(`${supabaseUrl}/rest/v1/api_rate_limits?id=eq.${existing.id}`, {
+        method: 'PATCH',
+        headers: getHeaders(supabaseKey),
+        body: JSON.stringify({
+          minute_count: minuteCount + 1,
+          hourly_count: hourlyCount + 1,
+          daily_count: dailyCount + 1,
+          minute_window: minuteWindow.toISOString(),
+          hour_window: hourWindow.toISOString(),
+          day_window: dayWindow.toISOString()
+        })
+      });
+    } else {
+      // 创建新记录
+      await fetch(`${supabaseUrl}/rest/v1/api_rate_limits`, {
+        method: 'POST',
+        headers: getHeaders(supabaseKey),
+        body: JSON.stringify({
+          identifier,
+          type,
+          minute_count: 1,
+          hourly_count: 1,
+          daily_count: 1,
+          minute_window: minuteWindow.toISOString(),
+          hour_window: hourWindow.toISOString(),
+          day_window: dayWindow.toISOString()
+        })
+      });
+
+      minuteCount = 1;
+      hourlyCount = 1;
+      dailyCount = 1;
+    }
+
+    return {
+      success: true,
+      remaining_minute: config.rate_limit_minute - minuteCount,
+      remaining_hourly: config.rate_limit_hourly - hourlyCount,
+      remaining_daily: config.rate_limit_daily - dailyCount
+    };
+  } catch (error) {
+    console.error("速率限制检查失败:", error);
+    return {
+      success: true,
+      remaining_minute: config.rate_limit_minute,
+      remaining_hourly: config.rate_limit_hourly,
+      remaining_daily: config.rate_limit_daily
+    };
+  }
+}
+
+// 记录 API 调用日志
+async function logApiCall(supabaseUrl, supabaseKey, data) {
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/api_logs`, {
+      method: 'POST',
+      headers: getHeaders(supabaseKey),
+      body: JSON.stringify(data)
+    });
+  } catch (error) {
+    console.error("API 日志记录失败:", error);
+  }
+}
+
+// 获取时区配置
+async function getTimezoneConfig(supabaseUrl, supabaseKey) {
+  try {
+    return await select(supabaseUrl, supabaseKey, "api_config", {
+      columns: "timezone",
+      orderBy: "id.asc",
+      limit: "1",
+      single: true
+    });
+  } catch {
+    return { timezone: "Asia/Shanghai" };
+  }
+}
+
+// 根据时区生成当前时间字符串
+function getCurrentTimeInTimezone(timezone) {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone || "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  });
+  const parts = formatter.formatToParts(now);
+  const getPart = (type) => parts.find((p) => p.type === type)?.value || "";
+  const localDate = `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+  let hour = parseInt(getPart("hour"), 10);
+  // 处理 24 小时格式问题，如果 hour 是 24，改为 0
+  if (hour === 24) {
+    hour = 0;
+  }
+  const hourStr = hour.toString().padStart(2, '0');
+  const localTime = `${hourStr}:${getPart("minute")}:${getPart("second")}`;
+  // 返回 ISO 格式的时间字符串，不带时区信息
+  return `${localDate}T${localTime}`;
+}
+
 async function getEnabledFields(supabaseUrl, supabaseKey, endpoint) {
   try {
     console.log("DEBUG [getEnabledFields]: endpoint =", endpoint);
@@ -200,22 +395,44 @@ export async function onRequestGet(context) {
     .toString()
     .replace(/api_key=[^&]+/g, "api_key=***");
 
+  let responseStatus = 200;
+  let errorMessage = null;
+  let rateLimitResult = null;
+
   try {
     console.log("DEBUG [list GET]: Checking rate limit...");
     const config = await getRateLimitConfig(supabaseUrl, supabaseAnonKey);
     console.log("DEBUG [list GET]: config =", config);
     if (config && (await checkIpBlacklist(supabaseUrl, supabaseAnonKey, clientIp))) {
+      responseStatus = 429;
+      errorMessage = "IP 地址已被封禁";
       return new Response(
-        JSON.stringify({ success: false, error: "IP 地址已被封禁" }),
-        { headers: { "Content-Type": "application/json" }, status: 429 }
+        JSON.stringify({ success: false, error: errorMessage }),
+        { headers: { "Content-Type": "application/json" }, status: responseStatus }
       );
     }
 
+    // 检查速率限制（始终生效，不受认证开关影响）
+    if (config) {
+      rateLimitResult = await checkAndRecordRateLimit(supabaseUrl, supabaseAnonKey, clientIp, "ip", config);
+      if (!rateLimitResult.success) {
+        responseStatus = 429;
+        errorMessage = rateLimitResult.error;
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { headers: { "Content-Type": "application/json" }, status: responseStatus }
+        );
+      }
+    }
+
     console.log("DEBUG [list GET]: Verifying API key...");
-    if (!(await verifyApiKey(context, adminApiKey, supabaseUrl, supabaseAnonKey))) {
+    const authValidated = await verifyApiKey(context, adminApiKey, supabaseUrl, supabaseAnonKey);
+    if (!authValidated) {
+      responseStatus = 401;
+      errorMessage = "未授权，需要有效的 API Key";
       return new Response(
-        JSON.stringify({ success: false, error: "未授权，需要有效的 API Key" }),
-        { headers: { "Content-Type": "application/json" }, status: 401 }
+        JSON.stringify({ success: false, error: errorMessage }),
+        { headers: { "Content-Type": "application/json" }, status: responseStatus }
       );
     }
     console.log("DEBUG [list GET]: API key verified");
@@ -253,7 +470,22 @@ export async function onRequestGet(context) {
 
     let filter = '';
     if (categoryId) filter += `&category_id=eq.${categoryId}`;
-    if (subCategoryId) filter += `&sub_category_id=eq.${subCategoryId}`;
+    
+    // 如果有 subCategoryId，获取二级分类名称并使用 tags 字段查询
+    if (subCategoryId) {
+      const subCategoryResponse = await fetch(
+        `${supabaseUrl}/rest/v1/sub_categories?select=name&id=eq.${subCategoryId}`,
+        { headers: getHeaders(supabaseAnonKey) }
+      );
+      const subCategoryData = await subCategoryResponse.json();
+      const subCategory = subCategoryData?.[0];
+      
+      if (subCategory) {
+        // 使用 JSONB contains 操作符查询包含该标签的视频
+        // 正确的 Supabase 语法: tags=cs.["标签名"]
+        filter += `&tags=cs.["${subCategory.name}"]`;
+      }
+    }
 
     console.log("DEBUG [list GET]: filter =", filter);
     console.log("DEBUG [list GET]: Fetching videos data and count...");
@@ -286,6 +518,26 @@ export async function onRequestGet(context) {
         return filtered;
       }) || [];
 
+    // 异步记录日志（不阻塞响应）
+    const timezoneConfig = await getTimezoneConfig(supabaseUrl, supabaseAnonKey);
+    const logData = {
+      ip_address: clientIp,
+      api_endpoint: "/api/list",
+      http_method: "GET",
+      request_params: requestParams,
+      response_status: 200,
+      auth_validated: true,
+      error_message: null,
+      user_agent: userAgent,
+      remaining_minute: rateLimitResult?.remaining_minute || null,
+      remaining_hourly: rateLimitResult?.remaining_hourly || null,
+      remaining_daily: rateLimitResult?.remaining_daily || null,
+      response_time_ms: Date.now() - startTime,
+      is_rate_limit_warning: false,
+      request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone)
+    };
+    logApiCall(supabaseUrl, supabaseAnonKey, logData).catch(() => {});
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -309,8 +561,30 @@ export async function onRequestGet(context) {
     );
   } catch (error) {
     console.error("获取视频列表失败:", error);
+    const errorMsg = error instanceof Error ? error.message : "获取视频列表失败";
+
+    // 异步记录错误日志
+    const timezoneConfig = await getTimezoneConfig(supabaseUrl, supabaseAnonKey);
+    const logData = {
+      ip_address: clientIp,
+      api_endpoint: "/api/list",
+      http_method: "GET",
+      request_params: requestParams,
+      response_status: 500,
+      auth_validated: true,
+      error_message: errorMsg,
+      user_agent: userAgent,
+      remaining_minute: rateLimitResult?.remaining_minute || null,
+      remaining_hourly: rateLimitResult?.remaining_hourly || null,
+      remaining_daily: rateLimitResult?.remaining_daily || null,
+      response_time_ms: Date.now() - startTime,
+      is_rate_limit_warning: false,
+      request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone)
+    };
+    logApiCall(supabaseUrl, supabaseAnonKey, logData).catch(() => {});
+
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "获取视频列表失败" }),
+      JSON.stringify({ success: false, error: errorMsg }),
       { headers: { "Content-Type": "application/json" }, status: 500 }
     );
   }

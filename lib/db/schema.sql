@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS videos (
   vod_id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-  sub_category_id INTEGER REFERENCES sub_categories(id) ON DELETE SET NULL,
   tags JSONB DEFAULT '[]',
   episode_count INTEGER NOT NULL,
   cover TEXT NOT NULL,
@@ -185,7 +184,6 @@ CREATE TABLE IF NOT EXISTS api_logs (
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_videos_category ON videos(category_id);
-CREATE INDEX IF NOT EXISTS idx_videos_sub_category ON videos(sub_category_id);
 CREATE INDEX IF NOT EXISTS idx_videos_synced_at ON videos(synced_at DESC);
 
 -- 全文搜索索引（中文支持）
@@ -229,8 +227,7 @@ INSERT INTO api_field_config (api_endpoint, field_name, field_label, is_enabled,
 ('list', 'description', '简介', true, false, 5),
 ('list', 'tags', '标签', false, false, 6),
 ('list', 'category_id', '一级分类ID', true, false, 7),
-('list', 'sub_category_id', '二级分类ID', false, false, 8),
-('list', 'actor', '演员', false, false, 9),
+('list', 'actor', '演员', false, false, 8),
 ('list', 'director', '导演', false, false, 10),
 ('list', 'writer', '编剧', false, false, 11),
 ('list', 'area', '地区', false, false, 12),
@@ -249,8 +246,7 @@ INSERT INTO api_field_config (api_endpoint, field_name, field_label, is_enabled,
 ('detail', 'tags', '标签', true, false, 6),
 ('detail', 'play_urls', '播放链接', true, true, 7),
 ('detail', 'category_id', '一级分类ID', true, false, 8),
-('detail', 'sub_category_id', '二级分类ID', true, false, 9),
-('detail', 'actor', '演员', true, false, 10),
+('detail', 'actor', '演员', true, false, 9),
 ('detail', 'director', '导演', true, false, 11),
 ('detail', 'writer', '编剧', true, false, 12),
 ('detail', 'area', '地区', true, false, 13),
@@ -470,15 +466,13 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 创建获取过滤后视频数量的函数（用于分页）
-CREATE OR REPLACE FUNCTION get_filtered_videos_count(p_category_id INTEGER DEFAULT NULL, p_sub_category_id INTEGER DEFAULT NULL)
+CREATE OR REPLACE FUNCTION get_filtered_videos_count(p_category_id INTEGER DEFAULT NULL)
 RETURNS INTEGER AS $$
 BEGIN
   RETURN (
     SELECT COUNT(*) FROM videos
     WHERE
       (p_category_id IS NULL OR category_id = p_category_id)
-      AND
-      (p_sub_category_id IS NULL OR sub_category_id = p_sub_category_id)
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

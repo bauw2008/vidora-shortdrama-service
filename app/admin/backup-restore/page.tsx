@@ -42,7 +42,7 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
         "vod_id",
         "name",
         "category_id",
-        "sub_category_id",
+        "",
         "tags",
         "episode_count",
         "cover",

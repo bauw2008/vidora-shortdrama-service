@@ -61,7 +61,6 @@ export interface VideoData {
   vod_id: number;
   name: string;
   category_id: number | null;
-  sub_category_id?: number;
   tags: string[];
   episode_count: number;
   cover: string;
@@ -289,8 +288,20 @@ export async function getVideos(
   if (categoryId) {
     query = query.eq("category_id", categoryId);
   }
+  
+  // 改为基于 tags 字段查询二级分类
   if (subCategoryId) {
-    query = query.eq("sub_category_id", subCategoryId);
+    // 先获取二级分类名称
+    const { data: subCategory } = await client
+      .from("sub_categories")
+      .select("name")
+      .eq("id", subCategoryId)
+      .single();
+    
+    if (subCategory) {
+      // 使用 JSONB @> 操作符查询包含该标签的视频
+      query = query.contains("tags", `[${subCategory.name}]`);
+    }
   }
 
   const from = (page - 1) * pageSize;
@@ -462,27 +473,21 @@ export async function updateVideoCategory(
 
 export async function batchUpdateVideoCategory(
   categoryId: number,
-  subCategoryId?: number,
+  subCategoryIds?: number[],
 ): Promise<number> {
   let query = supabase.from("videos").update({ category_id: categoryId });
 
-  if (subCategoryId) {
-    // 更新指定二级分类的视频
-    query = query.eq("sub_category_id", subCategoryId);
-  } else {
-    // 更新该一级分类下所有已映射的二级分类的视频
+  if (subCategoryIds && subCategoryIds.length > 0) {
+    // 获取二级分类名称列表
     const { data: subCategories } = await supabase
       .from("sub_categories")
-      .select("id")
-      .eq("category_id", categoryId);
+      .select("name")
+      .in("id", subCategoryIds);
 
-    const subCategoryIds = subCategories?.map((sc) => sc.id) || [];
-    if (subCategoryIds.length > 0) {
-      query = query.in("sub_category_id", subCategoryIds);
-    } else {
-      // 如果没有二级分类，返回0
-      return 0;
-    }
+    const tagNames = subCategories?.map((sc) => sc.name) || [];
+    
+    // 使用 JSONB ?| 操作符查询包含任意一个标签的视频
+    query = query.overlaps("tags", tagNames);
   }
 
   const { data, error } = await query.select("id");
@@ -493,6 +498,54 @@ export async function batchUpdateVideoCategory(
   }
 
   return data?.length || 0;
+}
+
+// 预览批量更新影响
+export async function previewBatchUpdateVideoCategory(
+  categoryId: number,
+  subCategoryIds?: number[],
+): Promise<{ count: number; sampleVideos: any[] }> {
+  let query = supabase.from("videos").select("vod_id, name, tags");
+
+  if (subCategoryIds && subCategoryIds.length > 0) {
+    // 获取二级分类名称列表
+    const { data: subCategories } = await supabase
+      .from("sub_categories")
+      .select("name")
+      .in("id", subCategoryIds);
+
+    const tagNames = subCategories?.map((sc) => sc.name) || [];
+    
+    // 使用 JSONB ?| 操作符查询包含任意一个标签的视频
+    query = query.overlaps("tags", tagNames);
+  }
+
+  const { data, error } = await query.limit(5);
+
+  if (error) {
+    console.error("预览批量更新失败:", error);
+    throw new Error("预览批量更新失败");
+  }
+
+  // 获取总数
+  let countQuery = supabase.from("videos").select("id", { count: "exact", head: true });
+  
+  if (subCategoryIds && subCategoryIds.length > 0) {
+    const { data: subCategories } = await supabase
+      .from("sub_categories")
+      .select("name")
+      .in("id", subCategoryIds);
+
+    const tagNames = subCategories?.map((sc) => sc.name) || [];
+    countQuery = countQuery.overlaps("tags", tagNames);
+  }
+
+  const { count } = await countQuery;
+
+  return {
+    count: count || 0,
+    sampleVideos: data || []
+  };
 }
 
 // ============================================
