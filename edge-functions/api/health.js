@@ -1,31 +1,32 @@
 function getHeaders(supabaseKey) {
   return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": "application/json",
   };
 }
 
 export async function onRequest(context) {
   const { request } = context;
-  
+
   // 处理 OPTIONS 预检请求
-  if (request.method === 'OPTIONS') {
+  if (request.method === "OPTIONS") {
     return new Response(null, {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization, X-API-Key",
       },
       status: 200,
     });
   }
-  
+
   // 处理 GET 请求
-  if (request.method === 'GET') {
+  if (request.method === "GET") {
     return handleGet(context);
   }
-  
+
   return new Response(
     JSON.stringify({ success: false, error: "Method not allowed" }),
     {
@@ -54,8 +55,11 @@ async function handleGet(context) {
   }
 
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/sync_status?select=*&limit=1`, { headers: getHeaders(supabaseKey) });
-    
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/videos?select=vod_id&limit=1`,
+      { headers: getHeaders(supabaseKey) },
+    );
+
     if (!response.ok) {
       return new Response(
         JSON.stringify({
@@ -82,7 +86,8 @@ async function handleGet(context) {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+          "Access-Control-Allow-Headers":
+            "Content-Type, Authorization, X-API-Key",
         },
         status: 200,
       },
