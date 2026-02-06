@@ -1,0 +1,48 @@
+name: 完整同步
+
+on:
+  # 手动触发
+  workflow_dispatch:
+
+env:
+  API_URL: ${{ secrets.API_URL }}
+  ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+
+jobs:
+  full-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6小时超时
+
+    steps:
+      - name: 执行完整同步
+        id: sync
+        run: |
+          echo "开始完整同步..."
+
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.API_URL }}/api/admin-api/sync" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_API_KEY }}" \
+            -d '{"type":"full"}')
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP状态码: $http_code"
+          echo "响应内容: $body"
+
+          echo "response=$body" >> $GITHUB_OUTPUT
+          echo "status_code=$http_code" >> $GITHUB_OUTPUT
+
+      - name: 检查执行结果
+        if: steps.sync.outputs.status_code != '200'
+        run: |
+          echo "❌ 完整同步失败"
+          echo "状态码: ${{ steps.sync.outputs.status_code }}"
+          echo "响应: ${{ steps.sync.outputs.response }}"
+          exit 1
+
+      - name: 显示执行结果
+        if: steps.sync.outputs.status_code == '200'
+        run: |
+          echo "✅ 完整同步已启动"
+          echo "响应: ${{ steps.sync.outputs.response }}"

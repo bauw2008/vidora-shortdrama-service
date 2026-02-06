@@ -1,0 +1,53 @@
+name: 增量同步
+
+on:
+  # 每天凌晨2点和早上5点执行
+  schedule:
+    - cron: '0 2 * * *'  # 凌晨2点
+    - cron: '0 5 * * *'  # 早上5点
+
+  # 允许手动触发（用于测试）
+  workflow_dispatch:
+
+env:
+  API_URL: ${{ secrets.API_URL }}
+  ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+
+jobs:
+  incremental-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # 30分钟超时
+
+    steps:
+      - name: 执行增量同步
+        id: sync
+        run: |
+          echo "开始增量同步（最近24小时）..."
+
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.API_URL }}/api/admin-api/sync" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_API_KEY }}" \
+            -d '{"type":"incremental"}')
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP状态码: $http_code"
+          echo "响应内容: $body"
+
+          echo "response=$body" >> $GITHUB_OUTPUT
+          echo "status_code=$http_code" >> $GITHUB_OUTPUT
+
+      - name: 检查执行结果
+        if: steps.sync.outputs.status_code != '200'
+        run: |
+          echo "❌ 增量同步失败"
+          echo "状态码: ${{ steps.sync.outputs.status_code }}"
+          echo "响应: ${{ steps.sync.outputs.response }}"
+          exit 1
+
+      - name: 显示执行结果
+        if: steps.sync.outputs.status_code == '200'
+        run: |
+          echo "✅ 增量同步已启动"
+          echo "响应: ${{ steps.sync.outputs.response }}"
