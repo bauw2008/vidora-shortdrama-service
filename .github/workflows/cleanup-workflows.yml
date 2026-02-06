@@ -30,10 +30,10 @@ jobs:
           # 列出所有工作流运行记录（按时间倒序）
           gh run list --limit 100 --json databaseId,name,status,createdAt,conclusion
           
-          # 获取需要清理的运行记录（保留最近30天的记录）
+          # 获取需要清理的运行记录（保留最近2天的记录）
           # 使用 jq 过滤和提取 databaseId
           OLD_RUNS=$(gh run list --limit 100 --json databaseId,name,status,createdAt,conclusion \
-            | jq -r '.[] | select(.status == "completed") | select(.createdAt < "'$(date -d '30 days ago' -u +%Y-%m-%dT%H:%M:%SZ)'") | .databaseId')
+            | jq -r '.[] | select(.status == "completed") | select(.createdAt < "'$(date -d '2 days ago' -u +%Y-%m-%dT%H:%M:%SZ)'") | .databaseId')
           
           echo "========================================"
           echo "找到需要清理的运行记录数量: $(echo "$OLD_RUNS" | wc -l)"
