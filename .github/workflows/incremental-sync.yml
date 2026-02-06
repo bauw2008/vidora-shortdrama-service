@@ -51,15 +51,7 @@ jobs:
           echo "========================================"
 
           # 执行增量同步脚本
-          node -e "
-          const { execSync } = require('child_process');
-          try {
-            execSync('npx tsx lib/sync.ts incremental 24', { stdio: 'inherit' });
-          } catch (error) {
-            console.error('同步失败:', error);
-            process.exit(1);
-          }
-          "
+          npx tsx lib/sync-cli.ts incremental 24
 
           echo "========================================"
           echo "✅ 增量同步完成"

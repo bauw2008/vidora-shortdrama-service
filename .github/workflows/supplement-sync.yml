@@ -46,15 +46,7 @@ jobs:
           echo "========================================"
 
           # 执行补充同步脚本
-          node -e "
-          const { execSync } = require('child_process');
-          try {
-            execSync('npx tsx lib/sync.ts resync', { stdio: 'inherit' });
-          } catch (error) {
-            console.error('同步失败:', error);
-            process.exit(1);
-          }
-          "
+          npx tsx lib/sync-cli.ts resync
 
           echo "========================================"
           echo "✅ 补充同步完成"

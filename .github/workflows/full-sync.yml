@@ -46,15 +46,7 @@ jobs:
           echo "========================================"
 
           # 执行完整同步脚本
-          node -e "
-          const { execSync } = require('child_process');
-          try {
-            execSync('npx tsx lib/sync.ts full', { stdio: 'inherit' });
-          } catch (error) {
-            console.error('同步失败:', error);
-            process.exit(1);
-          }
-          "
+          npx tsx lib/sync-cli.ts full
 
           echo "========================================"
           echo "✅ 完整同步完成"
