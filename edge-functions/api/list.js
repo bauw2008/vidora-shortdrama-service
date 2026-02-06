@@ -9,6 +9,11 @@ function getHeaders(supabaseKey) {
 
 // KV 缓存辅助函数
 async function getCachedValue(kv, key, ttl, fetchFn) {
+  if (!kv || typeof kv.get !== 'function' || typeof kv.put !== 'function') {
+    console.log(`DEBUG [KV Cache]: KV not available, fetching directly - ${key}`);
+    return await fetchFn();
+  }
+
   try {
     const cached = await kv.get(key, { type: 'json' });
     if (cached) {
@@ -23,7 +28,7 @@ async function getCachedValue(kv, key, ttl, fetchFn) {
   const value = await fetchFn();
   if (value) {
     try {
-      await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
+      await kv.put(key, JSON.stringify(value));
     } catch (error) {
       console.log(`DEBUG [KV Cache]: PUT ERROR - ${key}`, error);
     }
@@ -33,7 +38,7 @@ async function getCachedValue(kv, key, ttl, fetchFn) {
 
 // 使用 RPC 获取过滤后的 count，避免 EdgeOne Pages fetch 头部解析问题
 // 接受 subCategoryId 作为参数，查询其对应的 category_id
-async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, subCategoryId, kv) {
+async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, subCategoryId) {
   let count = 0;
 
   // 构建查询
@@ -43,11 +48,11 @@ async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, subCategor
   // 如果有 subCategoryId，获取 category_id 并直接查询
   if (subCategoryId) {
     let subCategoryIdResult = null;
-    if (kv) {
+    if (typeof vidora_cache !== 'undefined' && vidora_cache !== null) {
       // 使用 KV 缓存，30 分钟过期
       const cacheKey = `sub_category_category_id_${subCategoryId}`;
       subCategoryIdResult = await getCachedValue(
-        kv,
+        vidora_cache,
         cacheKey,
         1800,
         async () => {
@@ -140,8 +145,8 @@ async function select(supabaseUrl, supabaseKey, table, options = {}) {
   return single ? (data[0] || null) : data;
 }
 
-async function getApiConfig(supabaseUrl, supabaseKey, kv) {
-  if (!kv) {
+async function getApiConfig(supabaseUrl, supabaseKey) {
+  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
       const response = await fetch(`${supabaseUrl}/rest/v1/api_config?select=auth_enabled&limit=1`, {
@@ -162,7 +167,7 @@ async function getApiConfig(supabaseUrl, supabaseKey, kv) {
   }
   // 使用 KV 缓存，5 分钟过期
   return getCachedValue(
-    kv,
+    vidora_cache,
     'api_config',
     300,
     async () => {
@@ -187,9 +192,9 @@ async function getApiConfig(supabaseUrl, supabaseKey, kv) {
 }
 
 // /api/list 支持认证开关
-async function verifyApiKey(context, adminApiKey, supabaseUrl, supabaseKey, kv) {
+async function verifyApiKey(context, adminApiKey, supabaseUrl, supabaseKey) {
   // 先获取 API 配置
-  const config = await getApiConfig(supabaseUrl, supabaseKey, kv);
+  const config = await getApiConfig(supabaseUrl, supabaseKey, vidora_cache);
   
   // 如果认证未启用，直接允许访问
   if (!config.auth_enabled) {
@@ -227,8 +232,8 @@ async function checkIpBlacklist(supabaseUrl, supabaseKey, ip) {
   }
 }
 
-async function getRateLimitConfig(supabaseUrl, supabaseKey, kv) {
-  if (!kv) {
+async function getRateLimitConfig(supabaseUrl, supabaseKey) {
+  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
       return await select(supabaseUrl, supabaseKey, "api_config", {
@@ -243,7 +248,7 @@ async function getRateLimitConfig(supabaseUrl, supabaseKey, kv) {
   }
   // 使用 KV 缓存，5 分钟过期
   return getCachedValue(
-    kv,
+    vidora_cache,
     'rate_limit_config',
     300,
     () => select(supabaseUrl, supabaseKey, "api_config", {
@@ -395,8 +400,8 @@ async function logApiCall(supabaseUrl, supabaseKey, data) {
 }
 
 // 获取时区配置
-async function getTimezoneConfig(supabaseUrl, supabaseKey, kv) {
-  if (!kv) {
+async function getTimezoneConfig(supabaseUrl, supabaseKey) {
+  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
       return await select(supabaseUrl, supabaseKey, "api_config", {
@@ -411,7 +416,7 @@ async function getTimezoneConfig(supabaseUrl, supabaseKey, kv) {
   }
   // 使用 KV 缓存，1 小时过期
   return getCachedValue(
-    kv,
+    vidora_cache,
     'timezone_config',
     3600,
     () => select(supabaseUrl, supabaseKey, "api_config", {
@@ -450,8 +455,8 @@ function getCurrentTimeInTimezone(timezone) {
   return `${localDate}T${localTime}`;
 }
 
-async function getEnabledFields(supabaseUrl, supabaseKey, endpoint, kv) {
-  if (!kv) {
+async function getEnabledFields(supabaseUrl, supabaseKey, endpoint) {
+  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
       console.log("DEBUG [getEnabledFields]: endpoint =", endpoint);
@@ -474,7 +479,7 @@ async function getEnabledFields(supabaseUrl, supabaseKey, endpoint, kv) {
   // 使用 KV 缓存，10 分钟过期
   const cacheKey = `enabled_fields_${endpoint}`;
   return getCachedValue(
-    kv,
+    vidora_cache,
     cacheKey,
     600,
     async () => {
@@ -504,11 +509,10 @@ export async function onRequestGet(context) {
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;
-  const kv = env.KV || null; // 获取 KV Storage，如果不存在则为 null
 
   console.log("DEBUG [list GET]: supabaseUrl =", supabaseUrl);
   console.log("DEBUG [list GET]: adminApiKey =", adminApiKey);
-  console.log("DEBUG [list GET]: KV available =", !!kv);
+  console.log("DEBUG [list GET]: KV available =", !!vidora_cache);
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return new Response(
@@ -530,7 +534,7 @@ export async function onRequestGet(context) {
 
   try {
     console.log("DEBUG [list GET]: Checking rate limit...");
-    const config = await getRateLimitConfig(supabaseUrl, supabaseAnonKey, kv);
+    const config = await getRateLimitConfig(supabaseUrl, supabaseAnonKey);
     console.log("DEBUG [list GET]: config =", config);
     if (config && (await checkIpBlacklist(supabaseUrl, supabaseAnonKey, clientIp))) {
       responseStatus = 429;
@@ -555,7 +559,7 @@ export async function onRequestGet(context) {
     }
 
     console.log("DEBUG [list GET]: Verifying API key...");
-    const authValidated = await verifyApiKey(context, adminApiKey, supabaseUrl, supabaseAnonKey, kv);
+    const authValidated = await verifyApiKey(context, adminApiKey, supabaseUrl, supabaseAnonKey);
     if (!authValidated) {
       responseStatus = 401;
       errorMessage = "未授权，需要有效的 API Key";
@@ -591,7 +595,7 @@ export async function onRequestGet(context) {
     }
 
     console.log("DEBUG [list GET]: Getting enabled fields...");
-    const enabledFields = await getEnabledFields(supabaseUrl, supabaseAnonKey, "list", kv);
+    const enabledFields = await getEnabledFields(supabaseUrl, supabaseAnonKey, "list");
     console.log("DEBUG [list GET]: enabledFields =", enabledFields);
 
     const from = (page - 1) * pageSize;
@@ -602,12 +606,12 @@ export async function onRequestGet(context) {
     if (categoryId) filter += `&category_id=eq.${categoryId}`;
 
     // 如果有 subCategoryId，获取 category_id 并直接查询
-    if (subCategoryId) {
-      if (kv) {
+    try {
+      if (subCategoryId) {
         // 使用 KV 缓存，30 分钟过期
         const cacheKey = `sub_category_category_id_${subCategoryId}`;
         const subCategoryIdResult = await getCachedValue(
-          kv,
+          vidora_cache,
           cacheKey,
           1800,
           async () => {
@@ -634,6 +638,8 @@ export async function onRequestGet(context) {
           filter += `&category_id=eq.${subCategoryIdResult}`;
         }
       }
+    } catch (error) {
+      console.error("Error fetching subCategoryId:", error);
     }
 
     console.log("DEBUG [list GET]: filter =", filter);
@@ -648,8 +654,8 @@ export async function onRequestGet(context) {
       offset: from.toString()
     });
 
-    // 使用 RPC 获取过滤后的 count，传入 subCategoryId 和 kv
-    const countPromise = getFilteredCount(supabaseUrl, supabaseAnonKey, categoryId, subCategoryId, kv);
+    // 使用 RPC 获取过滤后的 count，传入 subCategoryId
+    const countPromise = getFilteredCount(supabaseUrl, supabaseAnonKey, categoryId, subCategoryId);
 
     const [data, count] = await Promise.all([dataPromise, countPromise]);
 
@@ -669,7 +675,7 @@ export async function onRequestGet(context) {
 
     // 异步记录日志（不阻塞响应）
     // 使用 then 完全异步执行，不阻塞响应
-    getTimezoneConfig(supabaseUrl, supabaseAnonKey, kv).then(timezoneConfig => {
+    getTimezoneConfig(supabaseUrl, supabaseAnonKey).then(timezoneConfig => {
       const logData = {
         ip_address: clientIp,
         api_endpoint: "/api/list",
@@ -716,7 +722,7 @@ export async function onRequestGet(context) {
 
     // 异步记录错误日志
     // 使用 then 完全异步执行，不阻塞响应
-    getTimezoneConfig(supabaseUrl, supabaseAnonKey, kv).then(timezoneConfig => {
+    getTimezoneConfig(supabaseUrl, supabaseAnonKey).then(timezoneConfig => {
       const logData = {
         ip_address: clientIp,
         api_endpoint: "/api/list",
