@@ -196,3 +196,48 @@ export async function onRequestGet(context) {
 2. 单个函数代码包最大 5MB
 3. 请求 body 最大 1MB
 4. 建议定期清理 `api_logs` 表
+
+## 同步配置
+
+系统使用 GitHub Actions 来执行同步任务，提供三种同步方式：
+
+### 同步类型
+
+1. **增量同步**（自动执行）
+   - 执行时间：每天凌晨 2 点和早上 5 点
+   - 同步内容：最近 24 小时更新的视频
+   - 超时时间：30 分钟
+
+2. **完整同步**（手动触发）
+   - 执行方式：在 GitHub Actions 页面手动触发
+   - 同步内容：覆盖所有视频数据
+   - 超时时间：6 小时
+
+3. **补充同步**（手动触发）
+   - 执行方式：在 GitHub Actions 页面手动触发
+   - 同步内容：补充缺失的视频数据
+   - 超时时间：6 小时
+
+### 配置步骤
+
+1. **在 GitHub 仓库中添加 Secrets**：
+   - `API_URL`: EdgeOne 部署后的 API 地址（如 `https://your-domain.com`）
+   - `ADMIN_API_KEY`: 管理后台 API Key（默认：`3UF2hnRMXeNDABKhwYK4`）
+
+2. **工作流文件**：
+   - `.github/workflows/incremental-sync.yml`: 增量同步（定时）
+   - `.github/workflows/full-sync.yml`: 完整同步（手动）
+   - `.github/workflows/supplement-sync.yml`: 补充同步（手动）
+
+3. **手动触发同步**：
+   - 访问 GitHub 仓库的 Actions 页面
+   - 选择 "完整同步" 或 "补充同步" 工作流
+   - 点击 "Run workflow" 按钮
+
+### 优势
+
+- ✅ 成熟的 CI/CD 平台
+- ✅ 完整的执行日志
+- ✅ 支持手动触发
+- ✅ 不占用 Supabase 资源
+- ✅ 避免每分钟监听的资源浪费

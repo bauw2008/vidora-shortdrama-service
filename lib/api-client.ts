@@ -11,8 +11,7 @@ import type {
 // ============================================
 
 const TIMEOUT = 15000;
-const MIN_REQUEST_INTERVAL = 800; // 最小请求间隔（毫秒）- 稍微增加安全性
-const DEFAULT_API_URL = "https://api.wwzy.tv/api.php/provide/vod/";
+const MIN_REQUEST_INTERVAL = 800; // 最小请求间隔（毫秒）
 
 // 随机 User-Agent 列表（增加更多真实浏览器 UA）
 const USER_AGENTS = [
@@ -44,14 +43,9 @@ class ApiClient {
   private lastRequestTime: number = 0;
   private minRequestInterval: number = MIN_REQUEST_INTERVAL;
   private cachedApiUrl: string | null = null;
-  private apiUrl: string = DEFAULT_API_URL;
 
   constructor() {
-    // 初始化时尝试从环境变量读取（向后兼容）
-    if (process.env.API_SOURCE_URL) {
-      this.apiUrl = process.env.API_SOURCE_URL;
-      this.cachedApiUrl = this.apiUrl;
-    }
+    // 不再初始化默认 URL
   }
 
   // 获取随机 User-Agent
@@ -74,7 +68,7 @@ class ApiClient {
     this.lastRequestTime = Date.now();
   }
 
-  // 获取 API URL（优先从数据库读取）
+  // 获取 API URL（从数据库读取）
   private async getApiUrl(): Promise<string> {
     // 如果有缓存的 URL，直接返回
     if (this.cachedApiUrl) {
@@ -85,20 +79,18 @@ class ApiClient {
     try {
       const activeSource = await getActiveApiSource();
       if (activeSource) {
-        this.apiUrl = activeSource.url;
         this.cachedApiUrl = activeSource.url;
         console.log(
           `[API] 使用数据库配置的 API 源: ${activeSource.name} (${activeSource.url})`,
         );
-        return this.apiUrl;
+        return this.cachedApiUrl;
       }
     } catch (error) {
-      console.warn("[API] 从数据库获取 API 源失败，使用默认 URL");
+      console.error("[API] 从数据库获取 API 源失败:", error);
     }
 
-    // 如果数据库获取失败，使用默认 URL
-    console.log(`[API] 使用默认 API 源: ${this.apiUrl}`);
-    return this.apiUrl;
+    // 如果没有配置 API 源，抛出错误
+    throw new Error('No active API source configured. Please configure API source in admin panel at /admin/sources');
   }
 
   // 清除缓存的 API URL（用于切换 API 源时）

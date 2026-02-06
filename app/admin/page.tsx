@@ -4,19 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 
-interface SyncStatus {
-  id: number;
-  is_syncing: boolean;
-  sync_type: string;
-  last_sync_time: string | null;
-  total_videos: number;
-  total_categories: number;
-  current_page: number;
-  total_pages: number;
-  synced_count: number;
-  updated_at: string;
-}
-
 interface Stats {
   totalVideos: number;
   totalCategories: number;
@@ -26,26 +13,18 @@ interface Stats {
 
 export default function AdminPage() {
   const router = useRouter();
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("admin_token");
-      const [statusRes, statsRes] = await Promise.all([
-        fetch("/api/admin-api/sync", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/admin-api/stats", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      const statsRes = await fetch("/api/admin-api/stats", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      if (statusRes.ok && statsRes.ok) {
-        const statusData = await statusRes.json();
+      if (statsRes.ok) {
         const statsData = await statsRes.json();
-        setSyncStatus(statusData.data.status);
         setStats(statsData.data);
       }
     } catch (error) {
@@ -55,109 +34,12 @@ export default function AdminPage() {
     }
   };
 
-  const handleSync = async (
-    type: "full" | "incremental" | "resync",
-  ) => {
-    if (type === "full") {
-      const confirmed = window.confirm(
-        "⚠️ 警告：完整同步（覆盖模式）\n\n" +
-          "这将：\n" +
-          "- 不清空现有数据\n" +
-          "- 覆盖已存在的视频\n" +
-          "- 添加新视频\n" +
-          "- 预计耗时 15-20 分钟\n" +
-          "- 消耗大量 API 流量\n\n" +
-          "确定要继续吗？",
-      );
-      if (!confirmed) return;
-    }
-
-    if (type === "resync") {
-      const confirmed = window.confirm(
-        "⚠️ 警告：补充同步\n\n" +
-          "这将：\n" +
-          "- 检查所有视频\n" +
-          "- 补充缺失的视频\n" +
-          "- 预计耗时 15-20 分钟\n" +
-          "- 消耗大量 API 流量\n" +
-          "- 占用服务器资源\n\n" +
-          "确定要继续吗？",
-      );
-      if (!confirmed) return;
-    }
-
-    try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin-api/sync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const typeName =
-          type === "resync"
-            ? "补充"
-            : type === "full"
-                ? "完整"
-                : "增量";
-        alert(`${typeName}同步已加入队列，将在下一个执行周期开始`);
-        fetchData();
-      } else {
-        const errorData = await res.json();
-        alert(`同步请求失败: ${errorData.error}`);
-      }
-    } catch (error) {
-      console.error("触发同步失败:", error);
-      alert("同步启动失败");
-    }
-  };
-
-  const handleResetSyncStatus = async () => {
-    const confirmed = window.confirm(
-      "重置同步状态\n\n" +
-        '这将把同步状态重置为"空闲"，不会影响任何数据。\n\n' +
-        "仅在同步状态异常时使用此功能。\n\n" +
-        "确定要重置吗？",
-    );
-    if (!confirmed) return;
-
-    try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin-api/reset-sync-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.ok) {
-        alert("同步状态已重置");
-        fetchData();
-      } else {
-        const data = await res.json();
-        alert(`重置失败: ${data.error}`);
-      }
-    } catch (error) {
-      console.error("重置同步状态失败:", error);
-      alert("重置失败");
-    }
-  };
-
   const handleReset = async () => {
     const confirmed = window.confirm(
       "⚠️ 警告：重置数据库\n\n" +
         "这将：\n" +
         "- 清空所有视频数据\n" +
         "- 清空所有分类数据\n" +
-        "- 清空所有同步状态\n" +
         "- 此操作不可恢复！\n\n" +
         "确定要重置吗？",
     );
@@ -193,9 +75,6 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchData();
-    // 移除自动刷新以减少 API 请求
-    // const interval = setInterval(fetchData, 5000);
-    // return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {
@@ -273,73 +152,17 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* 同步状态 */}
-          <div className="bg-white shadow rounded-lg mb-8">
+          {/* 同步说明 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg mb-8">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                同步状态
+              <h3 className="text-lg leading-6 font-medium text-blue-900 mb-4">
+                📅 同步说明
               </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">同步状态:</span>
-                  <span
-                    className={
-                      syncStatus?.is_syncing
-                        ? "text-yellow-600"
-                        : "text-green-600"
-                    }
-                  >
-                    {syncStatus?.is_syncing ? "同步中..." : "空闲"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">上次同步:</span>
-                  <span className="text-gray-900">
-                    {syncStatus?.last_sync_time
-                      ? new Date(syncStatus.last_sync_time).toLocaleString(
-                          "zh-CN",
-                        )
-                      : "从未同步"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">同步视频数:</span>
-                  <span className="text-gray-900">
-                    {syncStatus?.total_videos || 0}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 flex-wrap">
-                <button
-                  onClick={() => handleSync("full")}
-                  disabled={syncStatus?.is_syncing}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  完整同步（覆盖）
-                </button>
-                <button
-                  onClick={() => handleSync("resync")}
-                  disabled={syncStatus?.is_syncing}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  补充同步
-                </button>
-                <button
-                  onClick={() => handleSync("incremental")}
-                  disabled={syncStatus?.is_syncing}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  增量同步（24小时）
-                </button>
-                {syncStatus?.is_syncing && (
-                  <button
-                    onClick={handleResetSyncStatus}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  >
-                    重置同步状态
-                  </button>
-                )}
+              <div className="space-y-2 text-sm text-blue-800">
+                <p>• <strong>增量同步</strong>：每天凌晨 2 点和早上 5 点自动执行（GitHub Actions）</p>
+                <p>• <strong>完整同步</strong>：手动触发，覆盖所有数据（GitHub Actions）</p>
+                <p>• <strong>补充同步</strong>：手动触发，补充缺失数据（GitHub Actions）</p>
+                <p className="mt-4 text-xs text-blue-600">请在 GitHub 仓库的 Actions 页面手动触发完整同步和补充同步</p>
               </div>
             </div>
           </div>
@@ -367,15 +190,6 @@ export default function AdminPage() {
                   <div className="font-medium text-gray-900">分类管理</div>
                   <div className="text-sm text-gray-500">
                     管理一级分类和二级分类映射
-                  </div>
-                </button>
-                <button
-                  onClick={() => router.push("/admin/sync-schedules")}
-                  className="text-left px-4 py-3 border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  <div className="font-medium text-gray-900">定时同步配置</div>
-                  <div className="text-sm text-gray-500">
-                    配置自动增量同步任务
                   </div>
                 </button>
                 <button
@@ -416,8 +230,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={handleReset}
-                  disabled={syncStatus?.is_syncing}
-                  className="text-left px-4 py-3 border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-left px-4 py-3 border border-red-300 rounded-md hover:bg-red-50"
                 >
                   <div className="font-medium text-red-900">重置数据库</div>
                   <div className="text-sm text-red-500">
@@ -426,8 +239,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => router.push("/admin/backup-restore")}
-                  disabled={syncStatus?.is_syncing}
-                  className="text-left px-4 py-3 border border-blue-300 rounded-md hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-left px-4 py-3 border border-blue-300 rounded-md hover:bg-blue-50"
                 >
                   <div className="font-medium text-blue-900">
                     数据备份与恢复

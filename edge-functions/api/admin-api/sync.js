@@ -190,16 +190,33 @@ export async function onRequestPost(context) {
     const body = await context.request.json();
     const { type = "incremental", hours = 24 } = body;
 
+    console.log("DEBUG [sync POST]: body =", body);
+    console.log("DEBUG [sync POST]: type =", type);
+    console.log("DEBUG [sync POST]: hours =", hours);
+
     const syncStatusList = await select(supabaseUrl, supabaseAnonKey, "sync_status", {
       limit: 1,
       orderBy: "id.asc"
     });
-    const syncStatus = syncStatusList[0];
+    const syncStatus = syncStatusList && syncStatusList.length > 0 ? syncStatusList[0] : null;
 
+    console.log("DEBUG [sync POST]: syncStatusList =", syncStatusList);
     console.log("DEBUG [sync POST]: syncStatus =", syncStatus);
     console.log("DEBUG [sync POST]: syncStatus.id =", syncStatus?.id);
+    console.log("DEBUG [sync POST]: syncStatus.is_syncing =", syncStatus?.is_syncing);
+
+    if (!syncStatus) {
+      return new Response(
+        JSON.stringify({ success: false, error: "同步状态未初始化" }),
+        {
+          headers: { "Content-Type": "application/json" },
+          status: 500,
+        },
+      );
+    }
 
     if (syncStatus?.is_syncing) {
+      console.log("DEBUG [sync POST]: Sync already in progress");
       return new Response(
         JSON.stringify({ success: false, error: "同步正在进行中" }),
         {
@@ -213,12 +230,79 @@ export async function onRequestPost(context) {
     console.log("DEBUG [sync POST]: filter =", filter);
     await supabaseUpdate(supabaseUrl, supabaseAnonKey, "sync_status", { is_syncing: true, sync_type: type, last_sync_time: new Date().toISOString() }, filter);
 
+    // 增量同步使用 pg_cron 自动触发
+    if (type === "incremental") {
+      const now = new Date();
+      const currentMinute = now.getMinutes();
+      const currentHour = now.getHours();
+      
+      // 生成 cron 表达式（在当前分钟执行）
+      const cronExpression = `${currentMinute} ${currentHour} * * *`;
+      const jobName = `incremental-sync-${Date.now()}`;
+      
+      console.log(`DEBUG [sync POST]: Scheduling pg_cron job: ${jobName} at ${cronExpression}`);
+      
+      // 调用 add_cron_job RPC 函数
+      const cronScheduleUrl = `${supabaseUrl}/rest/v1/rpc/add_cron_job`;
+      const cronResponse = await fetch(cronScheduleUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          job_name: jobName,
+          schedule: cronExpression,
+          command: 'SELECT trigger_cron_sync()'
+        })
+      });
+      
+      if (!cronResponse.ok) {
+        console.error("Failed to schedule pg_cron job:", await cronResponse.text());
+        // 如果 pg_cron 调用失败，回滚同步状态
+        await supabaseUpdate(supabaseUrl, supabaseAnonKey, "sync_status", { is_syncing: false }, filter);
+        return new Response(
+          JSON.stringify({ success: false, error: "安排定时任务失败，请检查 pg_cron 扩展是否已启用" }),
+          {
+            headers: { "Content-Type": "application/json" },
+            status: 500,
+          },
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "增量同步已启动，将在 1 分钟内自动执行",
+          type,
+          hours,
+          scheduledAt: cronExpression
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers":
+              "Content-Type, Authorization, X-API-Key",
+          },
+          status: 200,
+        },
+      );
+    }
+    
+    // 完整同步和补充同步：只设置状态，等待 GitHub Actions 或手动执行
     return new Response(
       JSON.stringify({
         success: true,
-        message: "同步任务已启动",
+        message: type === "full" 
+          ? "完整同步任务已启动，请使用 GitHub Actions 或手动运行 pnpm run sync:full"
+          : "补充同步任务已启动，请使用 GitHub Actions 或手动运行 pnpm run sync:resync",
         type,
         hours,
+        requiresManual: true
       }),
       {
         headers: {

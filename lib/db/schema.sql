@@ -89,33 +89,8 @@ CREATE TABLE IF NOT EXISTS api_sources (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 同步状态表
-CREATE TABLE IF NOT EXISTS sync_status (
-  id SERIAL PRIMARY KEY,
-  is_syncing BOOLEAN DEFAULT false,
-  sync_type TEXT DEFAULT '', -- 'full', 'incremental', 'resync'
-  last_sync_time TIMESTAMP WITH TIME ZONE,
-  total_videos INTEGER DEFAULT 0,
-  total_categories INTEGER DEFAULT 0,
-  -- 完整同步进度
-  current_page INTEGER DEFAULT 0,
-  total_pages INTEGER DEFAULT 0,
-  synced_count INTEGER DEFAULT 0,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 定时同步配置表
-CREATE TABLE IF NOT EXISTS sync_schedules (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  hour INTEGER NOT NULL CHECK (hour >= 0 AND hour <= 23),
-  minute INTEGER DEFAULT 0 CHECK (minute >= 0 AND minute <= 59),
-  is_active BOOLEAN DEFAULT true,
-  last_run_time TIMESTAMP WITH TIME ZONE,
-  next_run_time TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- 同步状态表、定时同步配置表、Cron 配置表、Cron Job 配置表已删除
+-- 同步功能现在通过 GitHub Actions 实现
 
 -- API 字段配置表
 CREATE TABLE IF NOT EXISTS api_field_config (
@@ -213,16 +188,13 @@ CREATE INDEX IF NOT EXISTS idx_api_logs_status ON api_logs(response_status);
 CREATE INDEX IF NOT EXISTS idx_api_logs_rate_limit_warning ON api_logs(is_rate_limit_warning);
 CREATE INDEX IF NOT EXISTS idx_api_logs_ip_status ON api_logs(ip_address, response_status);
 
+-- 注意：sync_status 和 sync_schedules 表的索引已删除（表已删除）
+
 -- ============================================
 -- 默认数据
 -- ============================================
 
 -- 不插入任何默认数据，项目为空壳，所有数据由用户自定义
-
--- 插入默认同步状态（仅此一项）
-INSERT INTO sync_status (is_syncing, total_videos, total_categories)
-VALUES (false, 0, 0)
-ON CONFLICT DO NOTHING;
 
 -- 插入默认分类版本（全局版本号）
 INSERT INTO category_version (version)
@@ -312,14 +284,13 @@ $$ language 'plpgsql' SECURITY DEFINER SET search_path = public;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sub_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sync_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_sources ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sync_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_field_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_rate_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ip_blacklist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE category_version ENABLE ROW LEVEL SECURITY;
 
 -- 公开读取策略
 CREATE POLICY "Public read categories" ON categories
@@ -331,13 +302,7 @@ CREATE POLICY "Public read sub_categories" ON sub_categories
 CREATE POLICY "Public read videos" ON videos
   FOR SELECT USING (true);
 
-CREATE POLICY "Public read sync_status" ON sync_status
-  FOR SELECT USING (true);
-
 CREATE POLICY "Public read api_sources" ON api_sources
-  FOR SELECT USING (true);
-
-CREATE POLICY "Public read sync_schedules" ON sync_schedules
   FOR SELECT USING (true);
 
 CREATE POLICY "Public read api_field_config" ON api_field_config
@@ -369,13 +334,7 @@ CREATE POLICY "Admin write sub_categories" ON sub_categories
 CREATE POLICY "Admin write videos" ON videos
   FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Admin write sync_status" ON sync_status
-  FOR ALL USING (auth.role() = 'service_role');
-
 CREATE POLICY "Admin write api_sources" ON api_sources
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Admin write sync_schedules" ON sync_schedules
   FOR ALL USING (auth.role() = 'service_role');
 
 CREATE POLICY "Admin write api_field_config" ON api_field_config
@@ -410,18 +369,8 @@ END;
 $$ language 'plpgsql' SECURITY DEFINER SET search_path = public;
 
 -- 创建触发器
-CREATE TRIGGER update_sync_status_updated_at
-  BEFORE UPDATE ON sync_status
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER update_api_sources_updated_at
   BEFORE UPDATE ON api_sources
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_sync_schedules_updated_at
-  BEFORE UPDATE ON sync_schedules
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
@@ -550,3 +499,9 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- ============================================
+-- 定时同步说明
+-- ============================================
+-- 同步功能现在通过 GitHub Actions 实现
+-- 请参考 .github/workflows/ 目录下的工作流配置

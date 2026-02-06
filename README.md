@@ -36,9 +36,6 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # ⚠️ 必需：用于数据库写入操作
 
-# API 源配置
-API_SOURCE_URL=https://api/api.php/provide/vod/
-
 # 管理后台认证
 ADMIN_API_KEY=your-secret-api-key
 ADMIN_USERNAME=admin
@@ -170,19 +167,14 @@ curl -X POST http://localhost:3000/api/admin/sync \
 
 ### 定时任务
 
-系统配置了每天凌晨 2 点自动执行增量同步：
+系统支持使用 Supabase pg_cron 扩展配置定时任务：
 
-```json
-{
-  "crons": [
-    {
-      "path": "/api/admin/sync",
-      "schedule": "0 2 * * *",
-      "body": { "type": "incremental", "hours": 24 }
-    }
-  ]
-}
-```
+1. **启用扩展**：在 Supabase Dashboard → Database → Extensions 中启用 `pg_cron` 和 `pg_net`
+2. **执行配置**：在 SQL Editor 中执行 `lib/db/pg_cron_setup.sql`
+3. **配置 Cron**：在管理后台或数据库中配置 `cron_config` 表
+4. **创建任务**：使用 SQL 创建定时任务或使用管理后台
+
+详细配置说明请参考 [DEPLOY.md](DEPLOY.md#定时同步配置)
 
 ## 项目结构
 
