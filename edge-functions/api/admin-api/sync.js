@@ -117,12 +117,9 @@ function verifyAdminApiKey(context, adminApiKey) {
 
 export async function onRequestGet(context) {
   const { env } = context;
-  const supabaseUrl = env.SUPABASE_URL;
-  const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;
 
   console.log("DEBUG [sync GET]: env.ADMIN_API_KEY =", adminApiKey);
-  console.log("DEBUG [sync GET]: env.ADMIN_USERNAME =", env.ADMIN_USERNAME);
 
   if (!verifyAdminApiKey(context, adminApiKey)) {
     return new Response(JSON.stringify({ success: false, error: "未授权" }), {
@@ -132,15 +129,14 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const syncStatus = await select(supabaseUrl, supabaseAnonKey, "sync_status", {
-      limit: 1,
-      orderBy: "id.asc"
-    });
-
+    // 返回同步状态（不再使用 sync_status 表）
     return new Response(
       JSON.stringify({
         success: true,
-        data: { status: syncStatus[0]?.is_syncing ? "running" : "idle" },
+        data: { 
+          status: "idle",
+          message: "同步状态：请使用 GitHub Actions 查看实际同步状态"
+        },
       }),
       {
         headers: {
@@ -169,12 +165,9 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { env } = context;
-  const supabaseUrl = env.SUPABASE_URL;
-  const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;
 
   console.log("DEBUG [sync POST]: env.ADMIN_API_KEY =", adminApiKey);
-  console.log("DEBUG [sync POST]: env.ADMIN_USERNAME =", env.ADMIN_USERNAME);
 
   if (!verifyAdminApiKey(context, adminApiKey)) {
     return new Response(JSON.stringify({ success: false, error: "未授权" }), {
@@ -182,9 +175,6 @@ export async function onRequestPost(context) {
       status: 401,
     });
   }
-
-  // 设置 service_role key 用于写入操作
-  serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   try {
     const body = await context.request.json();
@@ -194,115 +184,23 @@ export async function onRequestPost(context) {
     console.log("DEBUG [sync POST]: type =", type);
     console.log("DEBUG [sync POST]: hours =", hours);
 
-    const syncStatusList = await select(supabaseUrl, supabaseAnonKey, "sync_status", {
-      limit: 1,
-      orderBy: "id.asc"
-    });
-    const syncStatus = syncStatusList && syncStatusList.length > 0 ? syncStatusList[0] : null;
+    // 注意：实际同步由 GitHub Actions 执行
+    // 这个端点只是用于触发同步请求
+    // 同步逻辑需要在 GitHub Actions 中实现（调用实际的数据源 API）
 
-    console.log("DEBUG [sync POST]: syncStatusList =", syncStatusList);
-    console.log("DEBUG [sync POST]: syncStatus =", syncStatus);
-    console.log("DEBUG [sync POST]: syncStatus.id =", syncStatus?.id);
-    console.log("DEBUG [sync POST]: syncStatus.is_syncing =", syncStatus?.is_syncing);
+    const typeNames = {
+      'full': '完整同步',
+      'incremental': '增量同步',
+      'supplement': '补充同步'
+    };
 
-    if (!syncStatus) {
-      return new Response(
-        JSON.stringify({ success: false, error: "同步状态未初始化" }),
-        {
-          headers: { "Content-Type": "application/json" },
-          status: 500,
-        },
-      );
-    }
-
-    if (syncStatus?.is_syncing) {
-      console.log("DEBUG [sync POST]: Sync already in progress");
-      return new Response(
-        JSON.stringify({ success: false, error: "同步正在进行中" }),
-        {
-          headers: { "Content-Type": "application/json" },
-          status: 400,
-        },
-      );
-    }
-
-    const filter = `id=eq.${syncStatus.id}`;
-    console.log("DEBUG [sync POST]: filter =", filter);
-    await supabaseUpdate(supabaseUrl, supabaseAnonKey, "sync_status", { is_syncing: true, sync_type: type, last_sync_time: new Date().toISOString() }, filter);
-
-    // 增量同步使用 pg_cron 自动触发
-    if (type === "incremental") {
-      const now = new Date();
-      const currentMinute = now.getMinutes();
-      const currentHour = now.getHours();
-      
-      // 生成 cron 表达式（在当前分钟执行）
-      const cronExpression = `${currentMinute} ${currentHour} * * *`;
-      const jobName = `incremental-sync-${Date.now()}`;
-      
-      console.log(`DEBUG [sync POST]: Scheduling pg_cron job: ${jobName} at ${cronExpression}`);
-      
-      // 调用 add_cron_job RPC 函数
-      const cronScheduleUrl = `${supabaseUrl}/rest/v1/rpc/add_cron_job`;
-      const cronResponse = await fetch(cronScheduleUrl, {
-        method: 'POST',
-        headers: {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${serviceRoleKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
-          job_name: jobName,
-          schedule: cronExpression,
-          command: 'SELECT trigger_cron_sync()'
-        })
-      });
-      
-      if (!cronResponse.ok) {
-        console.error("Failed to schedule pg_cron job:", await cronResponse.text());
-        // 如果 pg_cron 调用失败，回滚同步状态
-        await supabaseUpdate(supabaseUrl, supabaseAnonKey, "sync_status", { is_syncing: false }, filter);
-        return new Response(
-          JSON.stringify({ success: false, error: "安排定时任务失败，请检查 pg_cron 扩展是否已启用" }),
-          {
-            headers: { "Content-Type": "application/json" },
-            status: 500,
-          },
-        );
-      }
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "增量同步已启动，将在 1 分钟内自动执行",
-          type,
-          hours,
-          scheduledAt: cronExpression
-        }),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers":
-              "Content-Type, Authorization, X-API-Key",
-          },
-          status: 200,
-        },
-      );
-    }
-    
-    // 完整同步和补充同步：只设置状态，等待 GitHub Actions 或手动执行
     return new Response(
       JSON.stringify({
         success: true,
-        message: type === "full" 
-          ? "完整同步任务已启动，请使用 GitHub Actions 或手动运行 pnpm run sync:full"
-          : "补充同步任务已启动，请使用 GitHub Actions 或手动运行 pnpm run sync:resync",
+        message: `${typeNames[type] || type}同步请求已接收`,
         type,
         hours,
-        requiresManual: true
+        note: "注意：实际同步逻辑需要在 GitHub Actions 中实现，这里只接收请求"
       }),
       {
         headers: {

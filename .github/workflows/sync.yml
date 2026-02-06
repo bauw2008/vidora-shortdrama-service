@@ -1,3 +1,0 @@
-# 此工作流已弃用
-# 现在使用 cron-sync.yml + cron-trigger.js 端点
-# 管理后台可以配置定时任务，GitHub Actions 会定时触发检查

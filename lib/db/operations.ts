@@ -552,68 +552,96 @@ export async function previewBatchUpdateVideoCategory(
 // 同步状态操作
 // ============================================
 
+// 内存中的同步状态（用于在没有 sync_status 表时）
+let memorySyncStatus: SyncStatus | null = null;
+
 export async function getSyncStatus(): Promise<SyncStatus | null> {
-  const { data, error } = await supabase
-    .from("sync_status")
-    .select("*")
-    .order("id", { ascending: true })
-    .limit(1)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("sync_status")
+      .select("*")
+      .order("id", { ascending: true })
+      .limit(1)
+      .single();
 
-  if (error) {
-    console.error("获取同步状态失败:", error);
-    return null;
+    if (error) {
+      console.warn("sync_status 表不存在，使用内存状态");
+      return memorySyncStatus;
+    }
+
+    return data;
+  } catch (e) {
+    console.warn("获取同步状态失败，使用内存状态:", e);
+    return memorySyncStatus;
   }
-
-  return data;
 }
 
 export async function updateSyncStatus(
   status: Partial<SyncStatus>,
 ): Promise<void> {
-  const { data: existing } = await supabase
-    .from("sync_status")
-    .select("id")
-    .order("id", { ascending: true })
-    .limit(1)
-    .single();
+  // 更新内存状态
+  if (!memorySyncStatus) {
+    memorySyncStatus = {
+      id: 1,
+      is_syncing: false,
+      sync_type: "",
+      last_sync_time: null,
+      total_videos: 0,
+      total_categories: 0,
+      current_page: 0,
+      total_pages: 0,
+      synced_count: 0,
+      updated_at: new Date().toISOString(),
+    };
+  }
+  memorySyncStatus = { ...memorySyncStatus, ...status, updated_at: new Date().toISOString() };
 
-  if (!existing) {
-    const { error } = await supabase.from("sync_status").insert({
-      is_syncing: status.is_syncing ?? false,
-      sync_type: status.sync_type ?? "",
-      last_sync_time: status.last_sync_time,
+  // 尝试更新数据库
+  try {
+    const { data: existing } = await supabase
+      .from("sync_status")
+      .select("id")
+      .order("id", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!existing) {
+      const { error } = await supabase.from("sync_status").insert({
+        is_syncing: status.is_syncing ?? false,
+        sync_type: status.sync_type ?? "",
+        last_sync_time: status.last_sync_time,
       total_videos: status.total_videos ?? 0,
       total_categories: status.total_categories ?? 0,
       current_page: status.current_page ?? 0,
       total_pages: status.total_pages ?? 0,
       synced_count: status.synced_count ?? 0,
-    });
+      });
+
+      if (error) {
+        console.warn("创建同步状态失败，仅使用内存状态:", error);
+      }
+      return;
+    }
+
+    const { error } = await supabase
+      .from("sync_status")
+      .update({
+        is_syncing: status.is_syncing,
+        sync_type: status.sync_type,
+        last_sync_time: status.last_sync_time,
+        total_videos: status.total_videos,
+        total_categories: status.total_categories,
+        current_page: status.current_page,
+        total_pages: status.total_pages,
+        synced_count: status.synced_count,
+      })
+      .eq("id", existing.id);
 
     if (error) {
-      console.error("创建同步状态失败:", error);
-      throw new Error("创建同步状态失败");
+      console.warn("更新同步状态失败，仅使用内存状态:", error);
     }
-    return;
-  }
-
-  const { error } = await supabase
-    .from("sync_status")
-    .update({
-      is_syncing: status.is_syncing,
-      sync_type: status.sync_type,
-      last_sync_time: status.last_sync_time,
-      total_videos: status.total_videos,
-      total_categories: status.total_categories,
-      current_page: status.current_page,
-      total_pages: status.total_pages,
-      synced_count: status.synced_count,
-    })
-    .eq("id", existing.id);
-
-  if (error) {
-    console.error("更新同步状态失败:", error);
-    throw new Error("更新同步状态失败");
+  } catch (e) {
+    console.warn("更新同步状态失败，仅使用内存状态:", e);
   }
 }
 

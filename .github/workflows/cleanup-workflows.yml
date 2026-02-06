@@ -17,9 +17,8 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: 安装 GitHub CLI
-        run: |
-          echo "GitHub CLI 已预装在 ubuntu-latest 环境中"
+      - name: 检出代码
+        uses: actions/checkout@v4
 
       - name: 获取工作流运行记录
         id: list-runs

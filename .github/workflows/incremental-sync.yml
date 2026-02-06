@@ -10,8 +10,9 @@ on:
   workflow_dispatch:
 
 env:
-  API_URL: ${{ secrets.API_URL }}
-  ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
 jobs:
   incremental-sync:
@@ -19,35 +20,55 @@ jobs:
     timeout-minutes: 30  # 30分钟超时
 
     steps:
+      - name: 设置时区
+        run: sudo timedatectl set-timezone Asia/Shanghai
+
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: |
+          npm ci
+
       - name: 执行增量同步
         id: sync
         run: |
-          echo "开始增量同步（最近24小时）..."
+          echo "========================================"
+          echo "开始增量同步（最近24小时）"
+          echo "========================================"
+          echo "开始时间: $(date)"
+          echo "========================================"
 
-          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.API_URL }}/api/admin-api/sync" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.ADMIN_API_KEY }}" \
-            -d '{"type":"incremental"}')
+          # 执行增量同步脚本
+          node -e "
+          const { execSync } = require('child_process');
+          try {
+            execSync('npx tsx lib/sync.ts incremental 24', { stdio: 'inherit' });
+          } catch (error) {
+            console.error('同步失败:', error);
+            process.exit(1);
+          }
+          "
 
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
+          echo "========================================"
+          echo "✅ 增量同步完成"
+          echo "完成时间: $(date)"
+          echo "========================================"
 
-          echo "HTTP状态码: $http_code"
-          echo "响应内容: $body"
-
-          echo "response=$body" >> $GITHUB_OUTPUT
-          echo "status_code=$http_code" >> $GITHUB_OUTPUT
-
-      - name: 检查执行结果
-        if: steps.sync.outputs.status_code != '200'
+      - name: 同步失败处理
+        if: failure()
         run: |
+          echo "========================================"
           echo "❌ 增量同步失败"
-          echo "状态码: ${{ steps.sync.outputs.status_code }}"
-          echo "响应: ${{ steps.sync.outputs.response }}"
+          echo "========================================"
+          echo "请检查："
+          echo "1. 数据源 API 是否可访问"
+          echo "2. Supabase 配置是否正确"
+          echo "3. 网络连接是否正常"
+          echo "========================================"
           exit 1
-
-      - name: 显示执行结果
-        if: steps.sync.outputs.status_code == '200'
-        run: |
-          echo "✅ 增量同步已启动"
-          echo "响应: ${{ steps.sync.outputs.response }}"
