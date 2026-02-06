@@ -30,7 +30,7 @@ export default function SyncSchedulesPage() {
   const fetchSchedules = async () => {
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sync-schedules", {
+      const res = await fetch("/api/admin-api/sync-schedules", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -57,7 +57,7 @@ export default function SyncSchedulesPage() {
       let res;
 
       if (editingSchedule) {
-        res = await fetch("/api/admin/sync-schedules", {
+        res = await fetch("/api/admin-api/sync-schedules", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -69,7 +69,7 @@ export default function SyncSchedulesPage() {
           }),
         });
       } else {
-        res = await fetch("/api/admin/sync-schedules", {
+        res = await fetch("/api/admin-api/sync-schedules", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -110,7 +110,7 @@ export default function SyncSchedulesPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch(`/api/admin/sync-schedules?id=${id}`, {
+      const res = await fetch(`/api/admin-api/sync-schedules?id=${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -139,7 +139,7 @@ export default function SyncSchedulesPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/init-sync-schedules", {
+      const res = await fetch("/api/admin-api/init-sync-schedules", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -161,7 +161,7 @@ export default function SyncSchedulesPage() {
   const handleGenerateCronSecret = async () => {
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/generate-cron-secret", {
+      const res = await fetch("/api/admin-api/generate-cron-secret", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -182,7 +182,7 @@ export default function SyncSchedulesPage() {
   const handleToggleActive = async (schedule: SyncSchedule) => {
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sync-schedules", {
+      const res = await fetch("/api/admin-api/sync-schedules", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

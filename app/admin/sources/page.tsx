@@ -24,7 +24,7 @@ export default function SourcesPage() {
   const fetchSources = async () => {
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sources", {
+      const res = await fetch("/api/admin-api/sources", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -43,7 +43,7 @@ export default function SourcesPage() {
     setTesting(id);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sources-test", {
+      const res = await fetch("/api/admin-api/sources-test", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,7 +76,7 @@ export default function SourcesPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sources", {
+      const res = await fetch("/api/admin-api/sources", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -98,13 +98,13 @@ export default function SourcesPage() {
   };
 
   const handleActivateSource = async (id: string) => {
-    if (!confirm("确定要激活此 API 源吗？这将停用其他所有 API 源。")) {
+    if (!confirm("确定要激活此 API 源吗？这将停用其他所有 API 源")) {
       return;
     }
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sources/activate", {
+      const res = await fetch("/api/admin-api/sources/activate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,7 +130,7 @@ export default function SourcesPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch(`/api/admin/sources?id=${id}`, {
+      const res = await fetch(`/api/admin-api/sources?id=${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

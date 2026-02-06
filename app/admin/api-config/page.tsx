@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -29,7 +29,7 @@ export default function ApiConfigPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/api-config", {
+      const res = await fetch("/api/admin-api/api-config", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -48,7 +48,7 @@ export default function ApiConfigPage() {
     setSaving(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/api-config", {
+      const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export default function ApiConfigPage() {
     setSaving(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/api-config", {
+      const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -143,7 +143,7 @@ API Key: ${data.data.api_key}
     setSaving(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/api-config", {
+      const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -171,7 +171,7 @@ API Key: ${data.data.api_key}
     setRateLimitSaving(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/api-config", {
+      const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -201,7 +201,7 @@ API Key: ${data.data.api_key}
   const handleUpdateTimezone = async () => {
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/api-config", {
+      const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -227,7 +227,7 @@ API Key: ${data.data.api_key}
     setRateLimitSaving(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/api-config", {
+      const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -2,7 +2,7 @@ export default function HomePage() {
   const baseUrl =
     typeof window !== "undefined"
       ? window.location.origin
-      : "http://localhost:3010";
+      : "http://localhost:8088";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -80,7 +80,7 @@ export default function HomePage() {
               <code className="text-lg font-mono text-gray-800">/list</code>
             </div>
             <p className="text-gray-600 mb-3">获取视频列表（精简字段）。</p>
-            <div className="mb-4">
+<div className="mb-4">
               <p className="font-medium text-gray-700 mb-2">查询参数:</p>
               <ul className="list-disc list-inside text-gray-600 space-y-1">
                 <li>
@@ -92,14 +92,8 @@ export default function HomePage() {
                   每页数量（默认: 20，最大: 100）
                 </li>
                 <li>
-                  <code className="bg-gray-100 px-1 rounded">categoryId</code> -
-                  一级分类 ID（可选）
-                </li>
-                <li>
-                  <code className="bg-gray-100 px-1 rounded">
-                    subCategoryId
-                  </code>{" "}
-                  - 二级分类 ID（可选）
+                  <code className="bg-gray-100 px-1 rounded">tag</code> -
+                  标签名称（二级分类，从 categories API 获取）
                 </li>
               </ul>
             </div>
@@ -110,17 +104,11 @@ export default function HomePage() {
 curl -H "Authorization: Bearer YOUR_API_KEY" \\
      "${baseUrl}/api/list?page=1&pageSize=20"
 
-# 按一级分类查询
+# 按标签查询（二级分类）
 curl -H "Authorization: Bearer YOUR_API_KEY" \\
-     "${baseUrl}/api/list?categoryId=1&page=1&pageSize=20"
+     "${baseUrl}/api/list?tag=甜宠&page=1&pageSize=20"
 
-# 按二级分类查询（通过标签筛选）
-curl -H "Authorization: Bearer YOUR_API_KEY" \\
-     "${baseUrl}/api/list?subCategoryId=2&page=1&pageSize=20"
-
-# 组合查询
-curl -H "Authorization: Bearer YOUR_API_KEY" \\
-     "${baseUrl}/api/list?categoryId=1&subCategoryId=2&page=1&pageSize=20"`}
+# 注意：一级分类仅用于展示，实际查询使用 tag 参数`}
               </p>
             </div>
           </div>
@@ -164,12 +152,43 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \\
                 /categories
               </code>
             </div>
-            <p className="text-gray-600 mb-3">获取所有一级分类。</p>
-            <div className="bg-gray-50 rounded p-4">
+            <p className="text-gray-600 mb-3">获取所有分类（包含一级分类和二级分类）。</p>
+            <div className="bg-gray-50 rounded p-4 mb-3">
               <p className="text-sm text-gray-500 mb-2">请求示例 (curl):</p>
               <p className="text-xs font-mono text-gray-700 break-all whitespace-pre-wrap">
                 {`curl -H "Authorization: Bearer YOUR_API_KEY" \\
      "${baseUrl}/api/categories"`}
+              </p>
+            </div>
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-3">
+              <p className="text-sm text-blue-900 font-medium mb-2">
+                📌 使用说明：
+              </p>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• 一级分类仅用于展示和分组，不直接关联视频</li>
+                <li>• 二级分类的 <code className="bg-blue-100 px-1 rounded">name</code> 字段用作 <code className="bg-blue-100 px-1 rounded">tag</code> 参数</li>
+                <li>• 客户端应缓存分类数据，使用 <code className="bg-blue-100 px-1 rounded">version</code> 检测更新</li>
+              </ul>
+            </div>
+            <div className="bg-blue-50 rounded p-4">
+              <p className="text-sm text-gray-500 mb-2">响应示例:</p>
+              <p className="text-xs font-mono text-gray-700 break-all whitespace-pre-wrap">
+                {`{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "都市短剧",
+      "sort": 0,
+      "is_active": true,
+      "sub_categories": [
+        { "id": 1, "name": "甜宠" },
+        { "id": 2, "name": "虐恋" }
+      ]
+    }
+  ],
+  "version": 1
+}`}
               </p>
             </div>
           </div>

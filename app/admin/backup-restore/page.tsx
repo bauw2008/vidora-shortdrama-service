@@ -42,7 +42,6 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
         "vod_id",
         "name",
         "category_id",
-        "",
         "tags",
         "episode_count",
         "cover",
@@ -143,7 +142,7 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
         table: table,
       });
 
-      const res = await fetch(`/api/admin/backup?${params}`, {
+      const res = await fetch(`/api/admin-api/backup?${params}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -205,7 +204,7 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
         formData.append("clearBeforeRestore", "true");
       }
 
-      const res = await fetch("/api/admin/restore", {
+      const res = await fetch("/api/admin-api/restore", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

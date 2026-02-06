@@ -30,7 +30,7 @@ export default function FieldConfigPage() {
     try {
       const token = localStorage.getItem("admin_token");
       const res = await fetch(
-        `/api/admin/field-config?apiEndpoint=${apiEndpoint}`,
+        `/api/admin-api/field-config?apiEndpoint=${apiEndpoint}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -64,7 +64,7 @@ export default function FieldConfigPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/field-config", {
+      const res = await fetch("/api/admin-api/field-config", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -97,7 +97,7 @@ export default function FieldConfigPage() {
     setSaving(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/field-config", {
+      const res = await fetch("/api/admin-api/field-config", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -142,7 +142,7 @@ export default function FieldConfigPage() {
     // 保存到服务器
     try {
       const token = localStorage.getItem("admin_token");
-      await fetch("/api/admin/field-config", {
+      await fetch("/api/admin-api/field-config", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -153,7 +153,7 @@ export default function FieldConfigPage() {
           display_order: newConfigs[index].display_order,
         }),
       });
-      await fetch("/api/admin/field-config", {
+      await fetch("/api/admin-api/field-config", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

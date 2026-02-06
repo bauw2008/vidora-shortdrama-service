@@ -35,7 +35,7 @@ export default function IpBlacklistPage() {
     try {
       const token = localStorage.getItem("admin_token");
       const res = await fetch(
-        `/api/admin/ip-blacklist?page=${pagination.page}&pageSize=${pagination.pageSize}`,
+        `/api/admin-api/ip-blacklist?page=${pagination.page}&pageSize=${pagination.pageSize}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -62,7 +62,7 @@ export default function IpBlacklistPage() {
     setAdding(true);
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/ip-blacklist", {
+      const res = await fetch("/api/admin-api/ip-blacklist", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +95,7 @@ export default function IpBlacklistPage() {
     setDeleting(Date.now());
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/ip-blacklist", {
+      const res = await fetch("/api/admin-api/ip-blacklist", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

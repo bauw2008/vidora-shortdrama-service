@@ -271,13 +271,16 @@ export async function onRequestGet(context) {
     }
 
     const headers = getHeaders(supabaseKey);
-    const categories = await supabaseFetch(`${supabaseUrl}/rest/v1/categories?select=*&order=sort.asc`, headers);
-    const subCategories = await supabaseFetch(`${supabaseUrl}/rest/v1/sub_categories?select=*&order=name`, headers);
+    const categories = await supabaseFetch(`${supabaseUrl}/rest/v1/categories?select=id,name,sort,is_active&order=sort.asc`, headers);
+    const subCategories = await supabaseFetch(`${supabaseUrl}/rest/v1/sub_categories?select=id,name,category_id&order=name`, headers);
+    const versionData = await supabaseFetch(`${supabaseUrl}/rest/v1/category_version?select=version&order=id.desc&limit=1`, headers);
 
     const result = categories.map((category) => ({
       ...category,
       sub_categories: subCategories.filter((sc) => sc.category_id === category.id) || [],
     })) || [];
+
+    const globalVersion = versionData[0]?.version || 1;
 
     const timezoneConfig = await getTimezoneConfig(supabaseUrl, supabaseKey);
     const logData = {
@@ -298,7 +301,7 @@ export async function onRequestGet(context) {
     };
     logApiCall(supabaseUrl, supabaseKey, logData).catch(() => {});
 
-    return new Response(JSON.stringify({ success: true, data: result }), {
+    return new Response(JSON.stringify({ success: true, data: result, version: globalVersion }), {
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",

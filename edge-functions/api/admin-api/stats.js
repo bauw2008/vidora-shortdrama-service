@@ -62,7 +62,7 @@ export async function onRequestGet(context) {
   try {
     // 使用 RPC 函数获取准确的统计数据
     console.log("DEBUG [stats]: Fetching videos count via RPC...");
-    const videoCount = await rpc(supabaseUrl, supabaseAnonKey, 'get_videos_count');
+    const videoCount = await rpc(supabaseUrl, supabaseAnonKey, 'get_total_videos_count');
     console.log("DEBUG [stats]: Videos count =", videoCount);
 
     // 使用 RPC 函数获取分类数量

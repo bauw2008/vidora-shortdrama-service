@@ -34,10 +34,10 @@ export default function AdminPage() {
     try {
       const token = localStorage.getItem("admin_token");
       const [statusRes, statsRes] = await Promise.all([
-        fetch("/api/admin/sync", {
+        fetch("/api/admin-api/sync", {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch("/api/admin/stats", {
+        fetch("/api/admin-api/stats", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -88,7 +88,7 @@ export default function AdminPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sync", {
+      const res = await fetch("/api/admin-api/sync", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,7 +130,7 @@ export default function AdminPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/reset-sync-status", {
+      const res = await fetch("/api/admin-api/reset-sync-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -170,7 +170,7 @@ export default function AdminPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/reset", {
+      const res = await fetch("/api/admin-api/reset", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

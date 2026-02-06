@@ -26,20 +26,6 @@ async function select(supabaseUrl, supabaseKey, table, options = {}) {
   return single ? (data[0] || null) : data;
 }
 
-async function insert(supabaseUrl, supabaseKey, table, data) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: getHeaders(supabaseKey),
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
 async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = '') {
   let url = `${supabaseUrl}/rest/v1/${table}`;
   if (filter) url += `?${filter}`;
@@ -48,20 +34,6 @@ async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = ''
     method: 'PATCH',
     headers: getHeaders(supabaseKey),
     body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-async function remove(supabaseUrl, supabaseKey, table, filter) {
-  const url = `${supabaseUrl}/rest/v1/${table}?${filter}`;
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: getHeaders(supabaseKey)
   });
 
   if (!response.ok) {
@@ -103,8 +75,10 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const data = await select(supabaseUrl, supabaseAnonKey, "categories", {
-      orderBy: "sort.asc"
+    const data = await select(supabaseUrl, supabaseAnonKey, "category_version", {
+      orderBy: "id.desc",
+      limit: "1",
+      single: true
     });
 
     return new Response(
@@ -118,45 +92,7 @@ export async function onRequestGet(context) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "获取分类失败",
-      }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 500,
-      },
-    );
-  }
-}
-
-export async function onRequestPost(context) {
-  const { env, request } = context;
-  const supabaseUrl = env.SUPABASE_URL;
-  const supabaseAnonKey = env.SUPABASE_ANON_KEY;
-  const adminApiKey = env.ADMIN_API_KEY;
-
-  if (!verifyAdminApiKey(context, adminApiKey)) {
-    return new Response(JSON.stringify({ success: false, error: "未授权" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 401,
-    });
-  }
-
-  try {
-    const body = await request.json();
-    const data = await insert(supabaseUrl, supabaseAnonKey, "categories", body);
-
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "创建分类失败",
+        error: error instanceof Error ? error.message : "获取版本号失败",
       }),
       {
         headers: { "Content-Type": "application/json" },
@@ -181,9 +117,19 @@ export async function onRequestPut(context) {
 
   try {
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { version } = body;
 
-    const data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "categories", updateData, `id=eq.${id}`);
+    if (typeof version !== 'number' || version < 1) {
+      return new Response(
+        JSON.stringify({ success: false, error: "版本号必须是大于等于 1 的整数" }),
+        {
+          headers: { "Content-Type": "application/json" },
+          status: 400,
+        },
+      );
+    }
+
+    const data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version }, "id=eq.1");
 
     return new Response(
       JSON.stringify({ success: true, data }),
@@ -196,47 +142,7 @@ export async function onRequestPut(context) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "更新分类失败",
-      }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 500,
-      },
-    );
-  }
-}
-
-export async function onRequestDelete(context) {
-  const { env, request } = context;
-  const supabaseUrl = env.SUPABASE_URL;
-  const supabaseAnonKey = env.SUPABASE_ANON_KEY;
-  const adminApiKey = env.ADMIN_API_KEY;
-
-  if (!verifyAdminApiKey(context, adminApiKey)) {
-    return new Response(JSON.stringify({ success: false, error: "未授权" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 401,
-    });
-  }
-
-  try {
-    const url = new URL(request.url);
-    const id = url.searchParams.get("id");
-
-    await remove(supabaseUrl, supabaseAnonKey, "categories", `id=eq.${id}`);
-
-    return new Response(
-      JSON.stringify({ success: true, message: "分类已删除" }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "删除分类失败",
+        error: error instanceof Error ? error.message : "更新版本号失败",
       }),
       {
         headers: { "Content-Type": "application/json" },

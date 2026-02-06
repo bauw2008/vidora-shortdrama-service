@@ -28,6 +28,7 @@ export default function CategoriesPage() {
   const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<number[]>(
     [],
   );
+  const [categoryVersion, setCategoryVersion] = useState(1);
 
   // 添加分类相关状态
   const [showAddForm, setShowAddForm] = useState(false);
@@ -41,20 +42,28 @@ export default function CategoriesPage() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("admin_token");
-      const [catRes, subRes] = await Promise.all([
-        fetch("/api/admin/categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/admin/sub-categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      const [catRes, subRes, versionRes] = await Promise.all([
+              fetch("/api/admin-api/categories", {
+                headers: { Authorization: `Bearer ${token}` },
+              }),
+              fetch("/api/admin-api/sub-categories", {
+                headers: { Authorization: `Bearer ${token}` },
+              }),
+              fetch("/api/admin-api/category-version", {
+                headers: { Authorization: `Bearer ${token}` },
+              }),
+            ]);
 
       if (catRes.ok && subRes.ok) {
         const catData = await catRes.json();
         const subData = await subRes.json();
         setCategories(catData.data);
         setSubCategories(subData.data);
+      }
+
+      if (versionRes.ok) {
+        const versionData = await versionRes.json();
+        setCategoryVersion(versionData.data?.version || 1);
       }
     } catch (error) {
       console.error("获取分类失败:", error);
@@ -63,10 +72,44 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleUpdateVersion = async () => {
+    const newVersion = prompt("请输入新的版本号：", categoryVersion.toString());
+    if (newVersion === null) return;
+
+    const versionNum = parseInt(newVersion, 10);
+    if (isNaN(versionNum) || versionNum < 1) {
+      alert("请输入有效的版本号（大于等于 1 的整数）");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch("/api/admin-api/category-version", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ version: versionNum }),
+      });
+
+      if (res.ok) {
+        setCategoryVersion(versionNum);
+        alert("版本号更新成功");
+      } else {
+        const errorData = await res.json();
+        alert(`更新失败: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error("更新版本号失败:", error);
+      alert("更新版本号失败");
+    }
+  };
+
   const handleCreateCategory = async () => {
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/categories", {
+      const res = await fetch("/api/admin-api/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -92,7 +135,7 @@ export default function CategoriesPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/categories", {
+      const res = await fetch("/api/admin-api/categories", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -121,7 +164,7 @@ export default function CategoriesPage() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch(`/api/admin/categories?id=${id}`, {
+      const res = await fetch(`/api/admin-api/categories?id=${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -142,7 +185,7 @@ export default function CategoriesPage() {
   ) => {
     try {
       const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin/sub-categories-update-mapping", {
+      const res = await fetch("/api/admin-api/sub-categories-update-mapping", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -177,7 +220,7 @@ export default function CategoriesPage() {
       
       // 先预览将要更新的视频
       const previewRes = await fetch(
-        `/api/admin/preview-batch-update-category?categoryId=${selectedCategoryId}&subCategoryIds=${selectedSubCategoryIds.join(",")}`,
+        `/api/admin-api/preview-batch-update-category?categoryId=${selectedCategoryId}&subCategoryIds=${selectedSubCategoryIds.join(",")}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -208,7 +251,7 @@ export default function CategoriesPage() {
       if (!confirmed) return;
 
       // 执行批量更新
-      const res = await fetch("/api/admin/videos/batch-update-category", {
+      const res = await fetch("/api/admin-api/videos/batch-update-category", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -279,6 +322,31 @@ export default function CategoriesPage() {
         </header>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* 版本号管理 */}
+          <div className="bg-white shadow rounded-lg mb-8">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    分类版本号
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    当前版本： <span className="font-bold text-indigo-600">{categoryVersion}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    任意分类（一级或二级）变化都会自动递增版本号，也可手动修改
+                  </p>
+                </div>
+                <button
+                  onClick={handleUpdateVersion}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  修改版本号
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* 一级分类 */}
           <div className="bg-white shadow rounded-lg mb-8">
             <div className="px-4 py-5 sm:p-6">

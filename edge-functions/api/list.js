@@ -36,61 +36,31 @@ async function getCachedValue(kv, key, ttl, fetchFn) {
   return value;
 }
 
-// 使用 RPC 获取过滤后的 count，避免 EdgeOne Pages fetch 头部解析问题
-// 接受 subCategoryId 作为参数，查询其对应的 category_id
-async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, subCategoryId) {
-  let count = 0;
+// 使用 Supabase RPC 函数获取过滤后的 count，避免 EdgeOne Pages fetch 头部解析问题
+// 直接使用 tag 参数查询 tags 字段
+async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, tag) {
+  // 使用 Supabase RPC 函数获取 count（避免 Content-Range 头部问题）
+  try {
+    const rpcUrl = `${supabaseUrl}/rest/v1/rpc/get_videos_count_with_search`;
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: getHeaders(supabaseKey),
+      body: JSON.stringify({
+        p_category_id: categoryId,
+        p_keyword: null,
+        p_tag: tag ? JSON.stringify([tag]) : null
+      })
+    });
 
-  // 构建查询
-  let filter = '';
-  if (categoryId) filter += `&category_id=eq.${categoryId}`;
-
-  // 如果有 subCategoryId，获取 category_id 并直接查询
-  if (subCategoryId) {
-    let subCategoryIdResult = null;
-    if (typeof vidora_cache !== 'undefined' && vidora_cache !== null) {
-      // 使用 KV 缓存，30 分钟过期
-      const cacheKey = `sub_category_category_id_${subCategoryId}`;
-      subCategoryIdResult = await getCachedValue(
-        vidora_cache,
-        cacheKey,
-        1800,
-        async () => {
-          const subCategoryResponse = await fetch(
-            `${supabaseUrl}/rest/v1/sub_categories?select=category_id&id=eq.${subCategoryId}`,
-            { headers: getHeaders(supabaseKey) }
-          );
-          const subCategoryData = await subCategoryResponse.json();
-          return subCategoryData?.[0]?.category_id || null;
-        }
-      );
-    } else {
-      // 没有 KV，直接查询
-      const subCategoryResponse = await fetch(
-        `${supabaseUrl}/rest/v1/sub_categories?select=category_id&id=eq.${subCategoryId}`,
-        { headers: getHeaders(supabaseKey) }
-      );
-      const subCategoryData = await subCategoryResponse.json();
-      subCategoryIdResult = subCategoryData?.[0]?.category_id;
+    if (response.ok) {
+      const count = await response.json();
+      return typeof count === 'number' ? count : 0;
     }
-
-    if (subCategoryIdResult) {
-      filter += `&category_id=eq.${subCategoryIdResult}`;
-    }
+  } catch (error) {
+    console.error("DEBUG [getFilteredCount]: RPC 调用失败", error);
   }
 
-  // 获取总数
-  const countUrl = `${supabaseUrl}/rest/v1/videos?select=vod_id${filter}`;
-  const countResponse = await fetch(countUrl,
-    { headers: { ...getHeaders(supabaseKey), 'Prefer': 'count=exact' } }
-  );
-
-  const contentRange = countResponse.headers.get('content-range');
-  if (contentRange) {
-    count = parseInt(contentRange.split('/')[1]) || 0;
-  }
-
-  return count;
+  return 0;
 }
 
 async function select(supabaseUrl, supabaseKey, table, options = {}) {
@@ -573,12 +543,7 @@ export async function onRequestGet(context) {
     const url = new URL(context.request.url);
     const page = parseInt(url.searchParams.get("page") || "1");
     const pageSize = parseInt(url.searchParams.get("pageSize") || "20");
-    const categoryId = url.searchParams.get("categoryId")
-      ? parseInt(url.searchParams.get("categoryId"))
-      : undefined;
-    const subCategoryId = url.searchParams.get("subCategoryId")
-      ? parseInt(url.searchParams.get("subCategoryId"))
-      : undefined;
+    const tag = url.searchParams.get("tag") || undefined;
 
     if (page < 1) {
       return new Response(
@@ -603,43 +568,11 @@ export async function onRequestGet(context) {
 
     let filter = '';
 
-    if (categoryId) filter += `&category_id=eq.${categoryId}`;
-
-    // 如果有 subCategoryId，获取 category_id 并直接查询
-    try {
-      if (subCategoryId) {
-        // 使用 KV 缓存，30 分钟过期
-        const cacheKey = `sub_category_category_id_${subCategoryId}`;
-        const subCategoryIdResult = await getCachedValue(
-          vidora_cache,
-          cacheKey,
-          1800,
-          async () => {
-            const subCategoryResponse = await fetch(
-              `${supabaseUrl}/rest/v1/sub_categories?select=category_id&id=eq.${subCategoryId}`,
-              { headers: getHeaders(supabaseAnonKey) }
-            );
-            const subCategoryData = await subCategoryResponse.json();
-            return subCategoryData?.[0]?.category_id || null;
-          }
-        );
-        if (subCategoryIdResult) {
-          filter += `&category_id=eq.${subCategoryIdResult}`;
-        }
-      } else {
-        // 没有 KV，直接查询
-        const subCategoryResponse = await fetch(
-          `${supabaseUrl}/rest/v1/sub_categories?select=category_id&id=eq.${subCategoryId}`,
-          { headers: getHeaders(supabaseAnonKey) }
-        );
-        const subCategoryData = await subCategoryResponse.json();
-        const subCategoryIdResult = subCategoryData?.[0]?.category_id;
-        if (subCategoryIdResult) {
-          filter += `&category_id=eq.${subCategoryIdResult}`;
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching subCategoryId:", error);
+    // 如果有 tag，直接查询 tags 字段
+    if (tag) {
+      // 使用 Supabase 的 contains 操作符，正确编码 JSON
+      const tagValue = encodeURIComponent(`["${tag}"]`);
+      filter += `&tags=cs.${tagValue}`;
     }
 
     console.log("DEBUG [list GET]: filter =", filter);
@@ -654,8 +587,8 @@ export async function onRequestGet(context) {
       offset: from.toString()
     });
 
-    // 使用 RPC 获取过滤后的 count，传入 subCategoryId
-    const countPromise = getFilteredCount(supabaseUrl, supabaseAnonKey, categoryId, subCategoryId);
+    // 使用 RPC 获取过滤后的 count，传入 tag 参数
+    const countPromise = getFilteredCount(supabaseUrl, supabaseAnonKey, null, tag);
 
     const [data, count] = await Promise.all([dataPromise, countPromise]);
 

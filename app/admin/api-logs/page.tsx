@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -66,7 +66,7 @@ export default function ApiLogsPage() {
         ),
       });
 
-      const res = await fetch(`/api/admin/api-logs?${params}`, {
+      const res = await fetch(`/api/admin-api/api-logs?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -128,7 +128,7 @@ export default function ApiLogsPage() {
 
     const confirmed = window.confirm(
       `确定要删除 ${daysNum} 天之前的所有日志吗？\n\n` +
-        `删除截止时间（${timezone}）: ${nowInTimezone.toLocaleString("zh-CN")}\n` +
+        `删除截止时间（${timezone}）： ${nowInTimezone.toLocaleString("zh-CN")}\n` +
         `此操作不可恢复！`,
     );
     if (!confirmed) return;
@@ -138,7 +138,7 @@ export default function ApiLogsPage() {
       const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({ beforeDate: beforeDateStr });
 
-      const res = await fetch(`/api/admin/api-logs?${params}`, {
+      const res = await fetch(`/api/admin-api/api-logs?${params}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -164,8 +164,8 @@ export default function ApiLogsPage() {
 
     const confirmed = window.confirm(
       `自动清理将删除最旧的日志，保留最多 ${stats.maxLogCount} 条记录。\n\n` +
-        `当前记录数: ${stats.totalCount}\n` +
-        `自动清理阈值: ${stats.autoCleanThreshold}\n` +
+        `当前记录数： ${stats.totalCount}\n` +
+        `自动清理阈值： ${stats.autoCleanThreshold}\n` +
         `预计删除: ${Math.max(0, stats.totalCount - stats.maxLogCount)} 条\n\n` +
         `确定要执行自动清理吗？`,
     );
@@ -176,7 +176,7 @@ export default function ApiLogsPage() {
       const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({ autoClean: "true" });
 
-      const res = await fetch(`/api/admin/api-logs?${params}`, {
+      const res = await fetch(`/api/admin-api/api-logs?${params}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -482,9 +482,9 @@ export default function ApiLogsPage() {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                           <div className="text-xs">
-                            <div>分: {log.remaining_minute ?? "-"}</div>
-                            <div>时: {log.remaining_hourly ?? "-"}</div>
-                            <div>天: {log.remaining_daily ?? "-"}</div>
+                            <div>分： {log.remaining_minute ?? "-"}</div>
+                            <div>时： {log.remaining_hourly ?? "-"}</div>
+                            <div>天： {log.remaining_daily ?? "-"}</div>
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
@@ -550,7 +550,7 @@ export default function ApiLogsPage() {
               </li>
               <li>新IP首次访问会记录，之后按采样策略记录</li>
               <li>自动清理：当日志数量超过8万条时，系统会提示执行自动清理</li>
-              <li>存储限制：最多保留10万条记录，估算大小控制在10MB以下</li>
+              <li>存储限制：最多保存10万条记录，估算大小控制在10MB以下</li>
               <li>手动清理：可以按日期范围清理指定天数之前的日志</li>
               <li>可以筛选"限流警告"来查看触发限流的记录（红色高亮）</li>
               <li>剩余配额显示每分钟、每小时、每天的剩余请求次数</li>

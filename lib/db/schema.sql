@@ -26,6 +26,13 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 分类全局版本表（任意分类变化都更新此版本号）
+CREATE TABLE IF NOT EXISTS category_version (
+  id SERIAL PRIMARY KEY,
+  version INTEGER DEFAULT 1,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- 二级分类表（API 的 vod_class 拆分）
 CREATE TABLE IF NOT EXISTS sub_categories (
   id SERIAL PRIMARY KEY,
@@ -217,6 +224,11 @@ INSERT INTO sync_status (is_syncing, total_videos, total_categories)
 VALUES (false, 0, 0)
 ON CONFLICT DO NOTHING;
 
+-- 插入默认分类版本（全局版本号）
+INSERT INTO category_version (version)
+VALUES (1)
+ON CONFLICT DO NOTHING;
+
 -- 插入默认字段配置
 INSERT INTO api_field_config (api_endpoint, field_name, field_label, is_enabled, is_required, display_order) VALUES
 -- /list 接口字段
@@ -343,6 +355,9 @@ CREATE POLICY "Public read ip_blacklist" ON ip_blacklist
 CREATE POLICY "Public read api_logs" ON api_logs
   FOR SELECT USING (true);
 
+CREATE POLICY "Public read category_version" ON category_version
+  FOR SELECT USING (true);
+
 -- 写入策略（需要通过 API Key 验证，这里暂时允许所有写入，实际应用中应该更严格）
 -- 注意：使用 USING (true) 允许所有认证用户写入，权限控制在应用层通过 API Key 验证实现
 CREATE POLICY "Service write categories" ON categories
@@ -376,6 +391,9 @@ CREATE POLICY "Service write ip_blacklist" ON ip_blacklist
   FOR ALL USING (true);
 
 CREATE POLICY "Service write api_logs" ON api_logs
+  FOR ALL USING (true);
+
+CREATE POLICY "Service write category_version" ON category_version
   FOR ALL USING (true);
 
 -- ============================================
@@ -427,6 +445,11 @@ CREATE TRIGGER update_ip_blacklist_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_category_version_updated_at
+  BEFORE UPDATE ON category_version
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================
 -- 统计函数
 -- ============================================
@@ -473,6 +496,57 @@ BEGIN
     SELECT COUNT(*) FROM videos
     WHERE
       (p_category_id IS NULL OR category_id = p_category_id)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- ============================================
+-- RPC 函数：用于 EdgeOne Edge Functions 获取数据总数
+-- 避免使用 Content-Range 响应头，防止 EdgeOne 解析错误
+-- ============================================
+
+-- 获取过滤后的视频总数（支持 category_id 过滤）
+-- 注意：重命名为 get_videos_count_by_category 避免与 get_videos_count() 冲突
+CREATE OR REPLACE FUNCTION get_videos_count_by_category(p_category_id INTEGER DEFAULT NULL)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*) FROM videos
+    WHERE (p_category_id IS NULL OR category_id = p_category_id)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 获取过滤后的视频总数（支持 category_id 和 tags 过滤）
+CREATE OR REPLACE FUNCTION get_videos_count_with_tags(
+  p_category_id INTEGER DEFAULT NULL,
+  p_tags JSONB DEFAULT '[]'::jsonb
+)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*) FROM videos
+    WHERE
+      (p_category_id IS NULL OR category_id = p_category_id)
+      AND (p_tags = '[]'::jsonb OR tags @> p_tags)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 获取过滤后的视频总数（支持 category_id、keyword 搜索、tag 过滤）
+CREATE OR REPLACE FUNCTION get_videos_count_with_search(
+  p_category_id INTEGER DEFAULT NULL,
+  p_keyword TEXT DEFAULT NULL,
+  p_tag JSONB DEFAULT NULL
+)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*) FROM videos
+    WHERE
+      (p_category_id IS NULL OR category_id = p_category_id)
+      AND (p_keyword IS NULL OR name ILIKE '%' || p_keyword || '%')
+      AND (p_tag IS NULL OR tags @> p_tag)
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
