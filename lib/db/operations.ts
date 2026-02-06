@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { supabase, supabaseAdmin } from "../supabase";
 
 // ============================================
 // 类型定义
@@ -92,19 +92,6 @@ export interface VideoData {
   updated_at: string; // 更新时间（字符串格式）
   added_at: number; // 添加时间戳
   synced_at?: string;
-}
-
-export interface SyncStatus {
-  id: number;
-  is_syncing: boolean;
-  sync_type: string;
-  last_sync_time: string | null;
-  total_videos: number;
-  total_categories: number;
-  current_page: number;
-  total_pages: number;
-  synced_count: number;
-  updated_at: string;
 }
 
 export interface PaginatedResult<T> {
@@ -288,7 +275,7 @@ export async function getVideos(
   if (categoryId) {
     query = query.eq("category_id", categoryId);
   }
-  
+
   // 改为基于 tags 字段查询二级分类
   if (subCategoryId) {
     // 先获取二级分类名称
@@ -297,7 +284,7 @@ export async function getVideos(
       .select("name")
       .eq("id", subCategoryId)
       .single();
-    
+
     if (subCategory) {
       // 使用 JSONB @> 操作符查询包含该标签的视频
       query = query.contains("tags", `[${subCategory.name}]`);
@@ -430,8 +417,9 @@ export async function saveVideos(
   let added = 0;
   let updated = 0;
 
+  // 统计新增和更新的数量
   for (const video of videos) {
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from("videos")
       .select("vod_id")
       .eq("vod_id", video.vod_id)
@@ -444,13 +432,23 @@ export async function saveVideos(
     }
   }
 
-  const { error } = await supabase.from("videos").upsert(videos, {
-    onConflict: "vod_id",
-  });
+  // 分批保存，每批最多 100 个视频，避免超时
+  const batchSize = 100;
+  for (let i = 0; i < videos.length; i += batchSize) {
+    const batch = videos.slice(i, i + batchSize);
+    const { error } = await supabaseAdmin.from("videos").upsert(batch, {
+      onConflict: "vod_id",
+    });
 
-  if (error) {
-    console.error("保存视频失败:", error);
-    throw new Error("保存视频失败");
+    if (error) {
+      console.error(
+        `保存视频失败 (批次 ${Math.floor(i / batchSize) + 1}):`,
+        error,
+      );
+      throw new Error("保存视频失败");
+    }
+
+    console.log(`[保存] 已保存 ${i + batch.length}/${videos.length} 个视频`);
   }
 
   return { added, updated };
@@ -460,7 +458,7 @@ export async function updateVideoCategory(
   vodId: number,
   categoryId: number,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from("videos")
     .update({ category_id: categoryId })
     .eq("vod_id", vodId);
@@ -475,7 +473,7 @@ export async function batchUpdateVideoCategory(
   categoryId: number,
   subCategoryIds?: number[],
 ): Promise<number> {
-  let query = supabase.from("videos").update({ category_id: categoryId });
+  let query = supabaseAdmin.from("videos").update({ category_id: categoryId });
 
   if (subCategoryIds && subCategoryIds.length > 0) {
     // 获取二级分类名称列表
@@ -485,7 +483,7 @@ export async function batchUpdateVideoCategory(
       .in("id", subCategoryIds);
 
     const tagNames = subCategories?.map((sc) => sc.name) || [];
-    
+
     // 使用 JSONB ?| 操作符查询包含任意一个标签的视频
     query = query.overlaps("tags", tagNames);
   }
@@ -515,7 +513,7 @@ export async function previewBatchUpdateVideoCategory(
       .in("id", subCategoryIds);
 
     const tagNames = subCategories?.map((sc) => sc.name) || [];
-    
+
     // 使用 JSONB ?| 操作符查询包含任意一个标签的视频
     query = query.overlaps("tags", tagNames);
   }
@@ -528,8 +526,10 @@ export async function previewBatchUpdateVideoCategory(
   }
 
   // 获取总数
-  let countQuery = supabase.from("videos").select("id", { count: "exact", head: true });
-  
+  let countQuery = supabase
+    .from("videos")
+    .select("id", { count: "exact", head: true });
+
   if (subCategoryIds && subCategoryIds.length > 0) {
     const { data: subCategories } = await supabase
       .from("sub_categories")
@@ -544,137 +544,12 @@ export async function previewBatchUpdateVideoCategory(
 
   return {
     count: count || 0,
-    sampleVideos: data || []
+    sampleVideos: data || [],
   };
 }
 
 // ============================================
 // 同步状态操作
-// ============================================
-
-// 内存中的同步状态（用于在没有 sync_status 表时）
-let memorySyncStatus: SyncStatus | null = null;
-
-export async function getSyncStatus(): Promise<SyncStatus | null> {
-  try {
-    const { data, error } = await supabase
-      .from("sync_status")
-      .select("*")
-      .order("id", { ascending: true })
-      .limit(1)
-      .single();
-
-    if (error) {
-      console.warn("sync_status 表不存在，使用内存状态");
-      return memorySyncStatus;
-    }
-
-    return data;
-  } catch (e) {
-    console.warn("获取同步状态失败，使用内存状态:", e);
-    return memorySyncStatus;
-  }
-}
-
-export async function updateSyncStatus(
-  status: Partial<SyncStatus>,
-): Promise<void> {
-  // 更新内存状态
-  if (!memorySyncStatus) {
-    memorySyncStatus = {
-      id: 1,
-      is_syncing: false,
-      sync_type: "",
-      last_sync_time: null,
-      total_videos: 0,
-      total_categories: 0,
-      current_page: 0,
-      total_pages: 0,
-      synced_count: 0,
-      updated_at: new Date().toISOString(),
-    };
-  }
-  memorySyncStatus = { ...memorySyncStatus, ...status, updated_at: new Date().toISOString() };
-
-  // 尝试更新数据库
-  try {
-    const { data: existing } = await supabase
-      .from("sync_status")
-      .select("id")
-      .order("id", { ascending: true })
-      .limit(1)
-      .single();
-
-    if (!existing) {
-      const { error } = await supabase.from("sync_status").insert({
-        is_syncing: status.is_syncing ?? false,
-        sync_type: status.sync_type ?? "",
-        last_sync_time: status.last_sync_time,
-      total_videos: status.total_videos ?? 0,
-      total_categories: status.total_categories ?? 0,
-      current_page: status.current_page ?? 0,
-      total_pages: status.total_pages ?? 0,
-      synced_count: status.synced_count ?? 0,
-      });
-
-      if (error) {
-        console.warn("创建同步状态失败，仅使用内存状态:", error);
-      }
-      return;
-    }
-
-    const { error } = await supabase
-      .from("sync_status")
-      .update({
-        is_syncing: status.is_syncing,
-        sync_type: status.sync_type,
-        last_sync_time: status.last_sync_time,
-        total_videos: status.total_videos,
-        total_categories: status.total_categories,
-        current_page: status.current_page,
-        total_pages: status.total_pages,
-        synced_count: status.synced_count,
-      })
-      .eq("id", existing.id);
-
-    if (error) {
-      console.warn("更新同步状态失败，仅使用内存状态:", error);
-    }
-  } catch (e) {
-    console.warn("更新同步状态失败，仅使用内存状态:", e);
-  }
-}
-
-export async function resetSyncStatus(): Promise<void> {
-  const { data: existing } = await supabase
-    .from("sync_status")
-    .select("id")
-    .order("id", { ascending: true })
-    .limit(1)
-    .single();
-
-  if (existing) {
-    const { error } = await supabase
-      .from("sync_status")
-      .update({
-        is_syncing: false,
-        sync_type: "",
-        last_sync_time: null,
-        total_videos: 0,
-        total_categories: 0,
-        current_page: 0,
-        total_pages: 0,
-        synced_count: 0,
-      })
-      .eq("id", existing.id);
-
-    if (error) {
-      console.error("重置同步状态失败:", error);
-      throw new Error("重置同步状态失败");
-    }
-  }
-}
-
 // ============================================
 // 统计操作
 // ============================================
@@ -763,7 +638,8 @@ export async function getApiSources(): Promise<ApiSource[]> {
 }
 
 export async function getActiveApiSource(): Promise<ApiSource | null> {
-  const { data, error } = await supabase
+  const client = supabaseAdmin || supabase;
+  const { data, error } = await client
     .from("api_sources")
     .select("*")
     .eq("is_active", true)

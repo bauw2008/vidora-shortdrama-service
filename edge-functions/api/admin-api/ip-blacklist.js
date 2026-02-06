@@ -6,7 +6,7 @@ import {
   remove,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
@@ -32,9 +32,9 @@ export async function onRequestGet(context) {
       select(supabaseUrl, supabaseAnonKey, "ip_blacklist", {
         orderBy: "created_at.desc",
         limit: pageSize.toString(),
-        offset: offset.toString()
+        offset: offset.toString(),
       }),
-      selectCount(supabaseUrl, supabaseAnonKey, "ip_blacklist")
+      selectCount(supabaseUrl, supabaseAnonKey, "ip_blacklist"),
     ]);
 
     const totalPages = Math.ceil(total / pageSize);
@@ -47,8 +47,8 @@ export async function onRequestGet(context) {
           page,
           pageSize,
           total,
-          totalPages
-        }
+          totalPages,
+        },
       }),
       {
         headers: { "Content-Type": "application/json" },
@@ -87,17 +87,19 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
-    const data = await insert(supabaseUrl, supabaseAnonKey, "ip_blacklist", body);
+    const data = await insert(
+      supabaseUrl,
+      supabaseAnonKey,
+      "ip_blacklist",
+      body,
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     return new Response(

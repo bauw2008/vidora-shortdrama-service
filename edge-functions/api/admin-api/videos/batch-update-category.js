@@ -1,9 +1,9 @@
 // Supabase REST API helpers
 function getHeaders(supabaseKey) {
   return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": "application/json",
   };
 }
 
@@ -53,20 +53,20 @@ export async function onRequestPost(context) {
     }
 
     // 获取二级分类名称列表
-    let filter = '';
+    let filter = "";
     let tagNames = [];
-    
+
     if (subCategoryIds && subCategoryIds.length > 0) {
       const subCategoriesResponse = await fetch(
-        `${supabaseUrl}/rest/v1/sub_categories?select=name&id=in.(${subCategoryIds.join(',')})`,
-        { headers: getHeaders(supabaseAnonKey) }
+        `${supabaseUrl}/rest/v1/sub_categories?select=name&id=in.(${subCategoryIds.join(",")})`,
+        { headers: getHeaders(supabaseAnonKey) },
       );
       const subCategories = await subCategoriesResponse.json();
       tagNames = subCategories?.map((sc) => sc.name) || [];
-      
+
       // 使用 PostgreSQL 的 contains 操作符
       if (tagNames.length > 0) {
-        const tagsArray = tagNames.map(t => `'${t}'`).join(',');
+        const tagsArray = tagNames.map((t) => `'${t}'`).join(",");
         filter = `tags=cs.{${tagsArray}}`;
       }
     }
@@ -74,14 +74,14 @@ export async function onRequestPost(context) {
     // 执行批量更新
     let updateUrl = `${supabaseUrl}/rest/v1/videos`;
     if (filter) updateUrl += `?${filter}`;
-    
+
     const updateResponse = await fetch(updateUrl, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: {
         ...getHeaders(supabaseAnonKey),
-        'Prefer': 'return=representation'
+        Prefer: "return=representation",
       },
-      body: JSON.stringify({ category_id: categoryId })
+      body: JSON.stringify({ category_id: categoryId }),
     });
 
     if (!updateResponse.ok) {
@@ -97,8 +97,8 @@ export async function onRequestPost(context) {
         success: true,
         data: {
           count,
-          message: `成功更新 ${count} 个视频的分类`
-        }
+          message: `成功更新 ${count} 个视频的分类`,
+        },
       }),
       {
         headers: { "Content-Type": "application/json" },

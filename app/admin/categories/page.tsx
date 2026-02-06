@@ -25,9 +25,9 @@ export default function CategoriesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
-  const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<number[]>(
-    [],
-  );
+  const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<
+    number[]
+  >([]);
   const [categoryVersion, setCategoryVersion] = useState(1);
 
   // 添加分类相关状态
@@ -41,18 +41,11 @@ export default function CategoriesPage() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
       const [catRes, subRes, versionRes] = await Promise.all([
-              fetch("/api/admin-api/categories", {
-                headers: { Authorization: `Bearer ${token}` },
-              }),
-              fetch("/api/admin-api/sub-categories", {
-                headers: { Authorization: `Bearer ${token}` },
-              }),
-              fetch("/api/admin-api/category-version", {
-                headers: { Authorization: `Bearer ${token}` },
-              }),
-            ]);
+        fetch("/api/admin-api/categories"),
+        fetch("/api/admin-api/sub-categories"),
+        fetch("/api/admin-api/category-version"),
+      ]);
 
       if (catRes.ok && subRes.ok) {
         const catData = await catRes.json();
@@ -83,13 +76,8 @@ export default function CategoriesPage() {
     }
 
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/category-version", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ version: versionNum }),
       });
 
@@ -108,13 +96,8 @@ export default function CategoriesPage() {
 
   const handleCreateCategory = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/categories", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(formData),
       });
 
@@ -134,13 +117,8 @@ export default function CategoriesPage() {
     if (!editingCategory) return;
 
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/categories", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           id: editingCategory.id,
           ...formData,
@@ -163,10 +141,8 @@ export default function CategoriesPage() {
     if (!confirm("确定要删除这个分类吗？")) return;
 
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch(`/api/admin-api/categories?id=${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
@@ -184,13 +160,8 @@ export default function CategoriesPage() {
     categoryId: number,
   ) => {
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/sub-categories-update-mapping", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ subCategoryId, categoryId }),
       });
 
@@ -216,14 +187,9 @@ export default function CategoriesPage() {
     }
 
     try {
-      const token = localStorage.getItem("admin_token");
-      
       // 先预览将要更新的视频
       const previewRes = await fetch(
         `/api/admin-api/preview-batch-update-category?categoryId=${selectedCategoryId}&subCategoryIds=${selectedSubCategoryIds.join(",")}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
       );
 
       if (!previewRes.ok) {
@@ -240,12 +206,15 @@ export default function CategoriesPage() {
       }
 
       // 显示确认对话框
-      const sampleNames = sampleVideos.slice(0, 3).map((v: any) => v.name).join("、");
+      const sampleNames = sampleVideos
+        .slice(0, 3)
+        .map((v: any) => v.name)
+        .join("、");
       const confirmed = confirm(
-        `即将更新 ${count} 个视频的分类为「${categories.find(c => c.id === selectedCategoryId)?.name}」\n` +
-        `选中的标签：${tagNames.join("、")}\n` +
-        `示例视频：${sampleNames}${sampleVideos.length > 3 ? "..." : ""}\n\n` +
-        `确定要继续吗？`
+        `即将更新 ${count} 个视频的分类为「${categories.find((c) => c.id === selectedCategoryId)?.name}」\n` +
+          `选中的标签：${tagNames.join("、")}\n` +
+          `示例视频：${sampleNames}${sampleVideos.length > 3 ? "..." : ""}\n\n` +
+          `确定要继续吗？`,
       );
 
       if (!confirmed) return;
@@ -253,10 +222,6 @@ export default function CategoriesPage() {
       // 执行批量更新
       const res = await fetch("/api/admin-api/videos/batch-update-category", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           categoryId: selectedCategoryId,
           subCategoryIds: selectedSubCategoryIds,
@@ -331,7 +296,10 @@ export default function CategoriesPage() {
                     分类版本号
                   </h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    当前版本： <span className="font-bold text-indigo-600">{categoryVersion}</span>
+                    当前版本：{" "}
+                    <span className="font-bold text-indigo-600">
+                      {categoryVersion}
+                    </span>
                   </p>
                   <p className="mt-1 text-xs text-gray-400">
                     任意分类（一级或二级）变化都会自动递增版本号，也可手动修改
@@ -525,10 +493,15 @@ export default function CategoriesPage() {
                         checked={selectedSubCategoryIds.includes(sc.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedSubCategoryIds([...selectedSubCategoryIds, sc.id]);
+                            setSelectedSubCategoryIds([
+                              ...selectedSubCategoryIds,
+                              sc.id,
+                            ]);
                           } else {
                             setSelectedSubCategoryIds(
-                              selectedSubCategoryIds.filter((id) => id !== sc.id),
+                              selectedSubCategoryIds.filter(
+                                (id) => id !== sc.id,
+                              ),
                             );
                           }
                         }}
@@ -537,7 +510,11 @@ export default function CategoriesPage() {
                       <span className="text-sm">{sc.name}</span>
                       {sc.category_id && (
                         <span className="text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
-                          → {categories.find((c) => c.id === sc.category_id)?.name}
+                          →{" "}
+                          {
+                            categories.find((c) => c.id === sc.category_id)
+                              ?.name
+                          }
                         </span>
                       )}
                     </label>
@@ -558,7 +535,9 @@ export default function CategoriesPage() {
 
               <button
                 onClick={handleBatchUpdate}
-                disabled={!selectedCategoryId || selectedSubCategoryIds.length === 0}
+                disabled={
+                  !selectedCategoryId || selectedSubCategoryIds.length === 0
+                }
                 className={`w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 ${
                   !selectedCategoryId || selectedSubCategoryIds.length === 0
                     ? "opacity-50 cursor-not-allowed"

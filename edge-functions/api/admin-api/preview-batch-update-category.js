@@ -1,14 +1,11 @@
 // Supabase REST API helpers (from shared)
-import {
-  select,
-  verifyAdminApiKey
-} from "./shared/helpers.js";
+import { select, verifyAdminApiKey } from "./shared/helpers.js";
 
 function getHeaders(supabaseKey) {
   return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": "application/json",
   };
 }
 
@@ -43,41 +40,48 @@ export async function onRequestGet(context) {
     let tagNames = [];
     if (subCategoryIdsParam) {
       const subCategoryIds = subCategoryIdsParam.split(",").map(Number);
-      
+
       // 获取二级分类名称列表
-      const subCategories = await select(supabaseUrl, supabaseAnonKey, "sub_categories", {
-        columns: "name",
-        filter: subCategoryIds.map(id => `id=eq.${id}`).join("&")
-      });
-      
+      const subCategories = await select(
+        supabaseUrl,
+        supabaseAnonKey,
+        "sub_categories",
+        {
+          columns: "name",
+          filter: subCategoryIds.map((id) => `id=eq.${id}`).join("&"),
+        },
+      );
+
       tagNames = subCategories?.map((sc) => sc.name) || [];
     }
 
     // 构建查询：使用 JSONB overlaps 操作符
-    let filter = '';
+    let filter = "";
     if (tagNames.length > 0) {
       // 使用 PostgreSQL 的 overlaps 操作符：tags ?| array['tag1', 'tag2']
-      const tagsArray = tagNames.map(t => `'${t}'`).join(',');
+      const tagsArray = tagNames.map((t) => `'${t}'`).join(",");
       filter = `tags=cs.{${tagsArray}}`; // contains 操作符
     }
 
     // 获取总数
     let countUrl = `${supabaseUrl}/rest/v1/videos?select=id`;
     if (filter) countUrl += `&${filter}`;
-    
-    const countResponse = await fetch(countUrl, { 
-      headers: { ...getHeaders(supabaseAnonKey), 'Prefer': 'count=exact' } 
+
+    const countResponse = await fetch(countUrl, {
+      headers: { ...getHeaders(supabaseAnonKey), Prefer: "count=exact" },
     });
-    
-    const countHeader = countResponse.headers.get('content-range');
-    const total = countHeader ? parseInt(countHeader.split('/')[1]) : 0;
+
+    const countHeader = countResponse.headers.get("content-range");
+    const total = countHeader ? parseInt(countHeader.split("/")[1]) : 0;
 
     // 获取样本视频
     let sampleUrl = `${supabaseUrl}/rest/v1/videos?select=vod_id,name,tags`;
     if (filter) sampleUrl += `&${filter}`;
     sampleUrl += `&limit=5&order=synced_at.desc`;
-    
-    const sampleResponse = await fetch(sampleUrl, { headers: getHeaders(supabaseAnonKey) });
+
+    const sampleResponse = await fetch(sampleUrl, {
+      headers: getHeaders(supabaseAnonKey),
+    });
     const sampleVideos = await sampleResponse.json();
 
     return new Response(
@@ -86,8 +90,8 @@ export async function onRequestGet(context) {
         data: {
           count: total,
           sampleVideos: sampleVideos || [],
-          tagNames
-        }
+          tagNames,
+        },
       }),
       {
         headers: { "Content-Type": "application/json" },

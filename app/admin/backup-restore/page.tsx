@@ -136,17 +136,12 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
   const handleBackup = async (table: string) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({
         format: "csv",
         table: table,
       });
 
-      const res = await fetch(`/api/admin-api/backup?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(`/api/admin-api/backup?${params}`);
 
       if (res.ok) {
         const blob = await res.blob();
@@ -196,7 +191,6 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
     setRestoreResult(null);
 
     try {
-      const token = localStorage.getItem("admin_token");
       const formData = new FormData();
       formData.append("file", file);
       formData.append("table", table);
@@ -206,9 +200,6 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
 
       const res = await fetch("/api/admin-api/restore", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
 

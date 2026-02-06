@@ -3,7 +3,7 @@ import {
   supabaseUpdate,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestPost(context) {
@@ -44,13 +44,16 @@ export async function onRequestPost(context) {
       supabaseAnonKey,
       "sub_categories",
       updateData,
-      `id=eq.${subCategoryId}`
+      `id=eq.${subCategoryId}`,
     );
 
     resetServiceRoleKey();
 
     return new Response(
-      JSON.stringify({ success: true, data: data || { subCategoryId, categoryId } }),
+      JSON.stringify({
+        success: true,
+        data: data || { subCategoryId, categoryId },
+      }),
       {
         headers: { "Content-Type": "application/json" },
         status: 200,

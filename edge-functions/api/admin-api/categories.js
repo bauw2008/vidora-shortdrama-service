@@ -6,7 +6,7 @@ import {
   remove,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
@@ -24,16 +24,13 @@ export async function onRequestGet(context) {
 
   try {
     const data = await select(supabaseUrl, supabaseAnonKey, "categories", {
-      orderBy: "sort.asc"
+      orderBy: "sort.asc",
     });
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({
@@ -69,17 +66,29 @@ export async function onRequestPost(context) {
     const data = await insert(supabaseUrl, supabaseAnonKey, "categories", body);
 
     // 更新全局版本号
-    await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version: (await select(supabaseUrl, supabaseAnonKey, "category_version", { orderBy: "id.desc", limit: "1", single: true })).version + 1 }, "id=eq.1");
+    await supabaseUpdate(
+      supabaseUrl,
+      supabaseAnonKey,
+      "category_version",
+      {
+        version:
+          (
+            await select(supabaseUrl, supabaseAnonKey, "category_version", {
+              orderBy: "id.desc",
+              limit: "1",
+              single: true,
+            })
+          ).version + 1,
+      },
+      "id=eq.1",
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     return new Response(
@@ -115,20 +124,38 @@ export async function onRequestPut(context) {
     const body = await request.json();
     const { id, ...updateData } = body;
 
-    const data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "categories", updateData, `id=eq.${id}`);
+    const data = await supabaseUpdate(
+      supabaseUrl,
+      supabaseAnonKey,
+      "categories",
+      updateData,
+      `id=eq.${id}`,
+    );
 
     // 更新全局版本号
-    await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version: (await select(supabaseUrl, supabaseAnonKey, "category_version", { orderBy: "id.desc", limit: "1", single: true })).version + 1 }, "id=eq.1");
+    await supabaseUpdate(
+      supabaseUrl,
+      supabaseAnonKey,
+      "category_version",
+      {
+        version:
+          (
+            await select(supabaseUrl, supabaseAnonKey, "category_version", {
+              orderBy: "id.desc",
+              limit: "1",
+              single: true,
+            })
+          ).version + 1,
+      },
+      "id=eq.1",
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     return new Response(
@@ -167,7 +194,22 @@ export async function onRequestDelete(context) {
     await remove(supabaseUrl, supabaseAnonKey, "categories", `id=eq.${id}`);
 
     // 更新全局版本号
-    await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version: (await select(supabaseUrl, supabaseAnonKey, "category_version", { orderBy: "id.desc", limit: "1", single: true })).version + 1 }, "id=eq.1");
+    await supabaseUpdate(
+      supabaseUrl,
+      supabaseAnonKey,
+      "category_version",
+      {
+        version:
+          (
+            await select(supabaseUrl, supabaseAnonKey, "category_version", {
+              orderBy: "id.desc",
+              limit: "1",
+              single: true,
+            })
+          ).version + 1,
+      },
+      "id=eq.1",
+    );
 
     resetServiceRoleKey();
 

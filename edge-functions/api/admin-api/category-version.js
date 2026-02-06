@@ -4,7 +4,7 @@ import {
   supabaseUpdate,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
@@ -21,19 +21,21 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const data = await select(supabaseUrl, supabaseAnonKey, "category_version", {
-      orderBy: "id.desc",
-      limit: "1",
-      single: true
-    });
-
-    return new Response(
-      JSON.stringify({ success: true, data }),
+    const data = await select(
+      supabaseUrl,
+      supabaseAnonKey,
+      "category_version",
       {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
+        orderBy: "id.desc",
+        limit: "1",
+        single: true,
       },
     );
+
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({
@@ -68,10 +70,13 @@ export async function onRequestPut(context) {
     const body = await request.json();
     const { version } = body;
 
-    if (typeof version !== 'number' || version < 1) {
+    if (typeof version !== "number" || version < 1) {
       resetServiceRoleKey();
       return new Response(
-        JSON.stringify({ success: false, error: "版本号必须是大于等于 1 的整数" }),
+        JSON.stringify({
+          success: false,
+          error: "版本号必须是大于等于 1 的整数",
+        }),
         {
           headers: { "Content-Type": "application/json" },
           status: 400,
@@ -79,17 +84,20 @@ export async function onRequestPut(context) {
       );
     }
 
-    const data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version }, "id=eq.1");
+    const data = await supabaseUpdate(
+      supabaseUrl,
+      supabaseAnonKey,
+      "category_version",
+      { version },
+      "id=eq.1",
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     return new Response(

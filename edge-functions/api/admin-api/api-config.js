@@ -5,7 +5,7 @@ import {
   supabaseUpdate,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
@@ -15,10 +15,16 @@ export async function onRequestGet(context) {
   const adminApiKey = env.ADMIN_API_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return new Response(JSON.stringify({ success: false, error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量",
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
 
   if (!verifyAdminApiKey(context, adminApiKey)) {
@@ -33,7 +39,7 @@ export async function onRequestGet(context) {
       columns: "*",
       orderBy: "id.asc",
       limit: "1",
-      single: true
+      single: true,
     });
 
     return new Response(JSON.stringify({ success: true, data }), {
@@ -41,7 +47,8 @@ export async function onRequestGet(context) {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization, X-API-Key",
       },
       status: 200,
     });
@@ -67,10 +74,16 @@ export async function onRequestPost(context) {
   const adminApiKey = env.ADMIN_API_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return new Response(JSON.stringify({ success: false, error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量",
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
 
   if (!verifyAdminApiKey(context, adminApiKey)) {
@@ -90,7 +103,7 @@ export async function onRequestPost(context) {
       columns: "id",
       orderBy: "id.asc",
       limit: "1",
-      single: true
+      single: true,
     });
     console.log("DEBUG [api-config POST]: existing =", existing);
 
@@ -99,8 +112,17 @@ export async function onRequestPost(context) {
       console.log("DEBUG [api-config POST]: Inserting new config");
       data = await insert(supabaseUrl, supabaseAnonKey, "api_config", body);
     } else {
-      console.log("DEBUG [api-config POST]: Updating existing config, id =", existing.id);
-      data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "api_config", body, `id=eq.${existing.id}`);
+      console.log(
+        "DEBUG [api-config POST]: Updating existing config, id =",
+        existing.id,
+      );
+      data = await supabaseUpdate(
+        supabaseUrl,
+        supabaseAnonKey,
+        "api_config",
+        body,
+        `id=eq.${existing.id}`,
+      );
       // 如果更新返回 null，使用传入的 body 作为返回数据
       if (!data) {
         data = { ...body, id: existing.id };
@@ -115,7 +137,8 @@ export async function onRequestPost(context) {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization, X-API-Key",
       },
       status: 200,
     });

@@ -159,10 +159,21 @@ export default function AdminPage() {
                 📅 同步说明
               </h3>
               <div className="space-y-2 text-sm text-blue-800">
-                <p>• <strong>增量同步</strong>：每天凌晨 2 点和早上 5 点自动执行（GitHub Actions）</p>
-                <p>• <strong>完整同步</strong>：手动触发，覆盖所有数据（GitHub Actions）</p>
-                <p>• <strong>补充同步</strong>：手动触发，补充缺失数据（GitHub Actions）</p>
-                <p className="mt-4 text-xs text-blue-600">请在 GitHub 仓库的 Actions 页面手动触发完整同步和补充同步</p>
+                <p>
+                  • <strong>增量同步</strong>：每天凌晨 2 点和早上 5
+                  点自动执行（GitHub Actions）
+                </p>
+                <p>
+                  • <strong>完整同步</strong>：手动触发，覆盖所有数据（GitHub
+                  Actions）
+                </p>
+                <p>
+                  • <strong>补充同步</strong>：手动触发，补充缺失数据（GitHub
+                  Actions）
+                </p>
+                <p className="mt-4 text-xs text-blue-600">
+                  请在 GitHub 仓库的 Actions 页面手动触发完整同步和补充同步
+                </p>
               </div>
             </div>
           </div>

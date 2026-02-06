@@ -23,10 +23,7 @@ export default function SourcesPage() {
 
   const fetchSources = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
-      const res = await fetch("/api/admin-api/sources", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch("/api/admin-api/sources");
 
       if (res.ok) {
         const data = await res.json();
@@ -42,13 +39,8 @@ export default function SourcesPage() {
   const handleTestSource = async (url: string, id: string) => {
     setTesting(id);
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/sources-test", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ url }),
       });
 
@@ -75,13 +67,8 @@ export default function SourcesPage() {
     }
 
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/sources", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(newSource),
       });
 
@@ -103,13 +90,8 @@ export default function SourcesPage() {
     }
 
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/sources/activate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ id }),
       });
 
@@ -129,10 +111,8 @@ export default function SourcesPage() {
     }
 
     try {
-      const token = localStorage.getItem("admin_token");
       const res = await fetch(`/api/admin-api/sources?id=${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {

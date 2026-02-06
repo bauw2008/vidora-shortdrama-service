@@ -57,7 +57,6 @@ export default function ApiLogsPage() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         pageSize: pagination.pageSize.toString(),
@@ -66,9 +65,7 @@ export default function ApiLogsPage() {
         ),
       });
 
-      const res = await fetch(`/api/admin-api/api-logs?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/admin-api/api-logs?${params}`);
 
       if (res.ok) {
         const data = await res.json();
@@ -135,12 +132,10 @@ export default function ApiLogsPage() {
 
     setDeleting(true);
     try {
-      const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({ beforeDate: beforeDateStr });
 
       const res = await fetch(`/api/admin-api/api-logs?${params}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
@@ -173,12 +168,10 @@ export default function ApiLogsPage() {
 
     setDeleting(true);
     try {
-      const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({ autoClean: "true" });
 
       const res = await fetch(`/api/admin-api/api-logs?${params}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {

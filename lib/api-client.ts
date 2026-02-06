@@ -90,7 +90,9 @@ class ApiClient {
     }
 
     // 如果没有配置 API 源，抛出错误
-    throw new Error('No active API source configured. Please configure API source in admin panel at /admin/sources');
+    throw new Error(
+      "No active API source configured. Please configure API source in admin panel at /admin/sources",
+    );
   }
 
   // 清除缓存的 API URL（用于切换 API 源时）

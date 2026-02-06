@@ -80,7 +80,7 @@ export default function HomePage() {
               <code className="text-lg font-mono text-gray-800">/list</code>
             </div>
             <p className="text-gray-600 mb-3">获取视频列表（精简字段）。</p>
-<div className="mb-4">
+            <div className="mb-4">
               <p className="font-medium text-gray-700 mb-2">查询参数:</p>
               <ul className="list-disc list-inside text-gray-600 space-y-1">
                 <li>
@@ -152,7 +152,9 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \\
                 /categories
               </code>
             </div>
-            <p className="text-gray-600 mb-3">获取所有分类（包含一级分类和二级分类）。</p>
+            <p className="text-gray-600 mb-3">
+              获取所有分类（包含一级分类和二级分类）。
+            </p>
             <div className="bg-gray-50 rounded p-4 mb-3">
               <p className="text-sm text-gray-500 mb-2">请求示例 (curl):</p>
               <p className="text-xs font-mono text-gray-700 break-all whitespace-pre-wrap">
@@ -166,8 +168,17 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \\
               </p>
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• 一级分类仅用于展示和分组，不直接关联视频</li>
-                <li>• 二级分类的 <code className="bg-blue-100 px-1 rounded">name</code> 字段用作 <code className="bg-blue-100 px-1 rounded">tag</code> 参数</li>
-                <li>• 客户端应缓存分类数据，使用 <code className="bg-blue-100 px-1 rounded">version</code> 检测更新</li>
+                <li>
+                  • 二级分类的{" "}
+                  <code className="bg-blue-100 px-1 rounded">name</code>{" "}
+                  字段用作 <code className="bg-blue-100 px-1 rounded">tag</code>{" "}
+                  参数
+                </li>
+                <li>
+                  • 客户端应缓存分类数据，使用{" "}
+                  <code className="bg-blue-100 px-1 rounded">version</code>{" "}
+                  检测更新
+                </li>
               </ul>
             </div>
             <div className="bg-blue-50 rounded p-4">
@@ -262,7 +273,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \\
                 <li>• vod_id - 视频 ID</li>
                 <li>• name - 片名</li>
                 <li>• category_id - 一级分类 ID</li>
-                
+
                 <li>• tags - 标签数组</li>
                 <li>• episode_count - 总集数</li>
                 <li>• cover - 海报图片</li>

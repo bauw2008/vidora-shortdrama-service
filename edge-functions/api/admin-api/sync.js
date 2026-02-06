@@ -3,20 +3,26 @@ let serviceRoleKey = null;
 
 function getHeaders(supabaseKey) {
   return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": "application/json",
   };
 }
 
 async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', single = false } = options;
+  const {
+    columns = "*",
+    filter = "",
+    orderBy = "",
+    limit = "",
+    single = false,
+  } = options;
   let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
 
   if (filter) url += `&${filter}`;
   if (orderBy) url += `&order=${orderBy}`;
   if (limit) url += `&limit=${limit}`;
-  if (single) url += '&limit=1';
+  if (single) url += "&limit=1";
 
   const response = await fetch(url, { headers: getHeaders(supabaseKey) });
 
@@ -25,15 +31,21 @@ async function select(supabaseUrl, supabaseKey, table, options = {}) {
   }
 
   const data = await response.json();
-  return single ? (data[0] || null) : data;
+  return single ? data[0] || null : data;
 }
 
-async function insert(supabaseUrl, supabaseKey, table, data, useServiceRole = false) {
+async function insert(
+  supabaseUrl,
+  supabaseKey,
+  table,
+  data,
+  useServiceRole = false,
+) {
   const key = serviceRoleKey || supabaseKey;
   const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
-    method: 'POST',
+    method: "POST",
     headers: getHeaders(key),
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
 
   if (!response.ok) {
@@ -43,7 +55,13 @@ async function insert(supabaseUrl, supabaseKey, table, data, useServiceRole = fa
   return response.json();
 }
 
-async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = '') {
+async function supabaseUpdate(
+  supabaseUrl,
+  supabaseKey,
+  table,
+  data,
+  filter = "",
+) {
   let url = `${supabaseUrl}/rest/v1/${table}`;
   if (filter) url += `?${filter}`;
 
@@ -52,12 +70,12 @@ async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = ''
 
   const key = serviceRoleKey || supabaseKey;
   const headers = getHeaders(key);
-  headers['Prefer'] = 'return=representation';
+  headers["Prefer"] = "return=representation";
 
   const response = await fetch(url, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
 
   console.log("DEBUG [supabaseUpdate]: Response status =", response.status);
@@ -78,8 +96,8 @@ async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = ''
 async function remove(supabaseUrl, supabaseKey, table, filter) {
   const url = `${supabaseUrl}/rest/v1/${table}?${filter}`;
   const response = await fetch(url, {
-    method: 'DELETE',
-    headers: getHeaders(supabaseKey)
+    method: "DELETE",
+    headers: getHeaders(supabaseKey),
   });
 
   if (!response.ok) {
@@ -107,7 +125,10 @@ function verifyAdminApiKey(context, adminApiKey) {
   }
 
   if (apiKey) {
-    console.log("DEBUG [verifyAdminApiKey]: X-API-Key match =", apiKey === adminApiKey);
+    console.log(
+      "DEBUG [verifyAdminApiKey]: X-API-Key match =",
+      apiKey === adminApiKey,
+    );
     return apiKey === adminApiKey;
   }
 
@@ -133,9 +154,9 @@ export async function onRequestGet(context) {
     return new Response(
       JSON.stringify({
         success: true,
-        data: { 
+        data: {
           status: "idle",
-          message: "同步状态：请使用 GitHub Actions 查看实际同步状态"
+          message: "同步状态：请使用 GitHub Actions 查看实际同步状态",
         },
       }),
       {
@@ -143,7 +164,8 @@ export async function onRequestGet(context) {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+          "Access-Control-Allow-Headers":
+            "Content-Type, Authorization, X-API-Key",
         },
         status: 200,
       },
@@ -189,9 +211,9 @@ export async function onRequestPost(context) {
     // 同步逻辑需要在 GitHub Actions 中实现（调用实际的数据源 API）
 
     const typeNames = {
-      'full': '完整同步',
-      'incremental': '增量同步',
-      'supplement': '补充同步'
+      full: "完整同步",
+      incremental: "增量同步",
+      supplement: "补充同步",
     };
 
     return new Response(
@@ -200,7 +222,7 @@ export async function onRequestPost(context) {
         message: `${typeNames[type] || type}同步请求已接收`,
         type,
         hours,
-        note: "注意：实际同步逻辑需要在 GitHub Actions 中实现，这里只接收请求"
+        note: "注意：实际同步逻辑需要在 GitHub Actions 中实现，这里只接收请求",
       }),
       {
         headers: {

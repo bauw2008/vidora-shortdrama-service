@@ -1,7 +1,5 @@
 // Supabase REST API helpers (from shared)
-import {
-  verifyAdminApiKey
-} from "./shared/helpers.js";
+import { verifyAdminApiKey } from "./shared/helpers.js";
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -25,12 +23,16 @@ export async function onRequestPost(context) {
 
     const response = await fetch(testUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
     });
 
     if (!response.ok) {
-      console.log("DEBUG [sources-test]: Response not OK, status =", response.status);
+      console.log(
+        "DEBUG [sources-test]: Response not OK, status =",
+        response.status,
+      );
       return new Response(
         JSON.stringify({ success: false, error: "API 源不可用" }),
         {
@@ -45,7 +47,10 @@ export async function onRequestPost(context) {
 
     if (data && data.code === 1 && data.list) {
       return new Response(
-        JSON.stringify({ success: true, data: { total: data.total || data.list.length } }),
+        JSON.stringify({
+          success: true,
+          data: { total: data.total || data.list.length },
+        }),
         {
           headers: { "Content-Type": "application/json" },
           status: 200,

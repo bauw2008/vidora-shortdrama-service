@@ -2,8 +2,6 @@ import { sourceClient } from "./api-client";
 import { parseVideoDetails, filterValidVideos } from "./parser";
 import {
   saveVideos,
-  getSyncStatus,
-  updateSyncStatus,
   clearVideos,
   clearSubCategories,
   getDatabaseStats,
@@ -41,23 +39,7 @@ const logProgress = (current: number, total: number, message: string): void => {
 };
 
 // ============================================
-// 更新同步状态
-// ============================================
-
-async function updateProgress(
-  current: number,
-  total: number,
-  message: string,
-): Promise<void> {
-  await updateSyncStatus({
-    is_syncing: true,
-    total_videos: current,
-  });
-  logProgress(current, total, message);
-}
-
-// ============================================
-// 完整同步（支持断点续传）
+// 完整同步
 // ============================================
 
 export async function fullSync(
@@ -74,31 +56,10 @@ export async function fullSync(
   log("========================================");
 
   try {
-    // 1. 检查同步状态
-    const status = await getSyncStatus();
-
-    // 如果正在同步且不强制重启，则不允许
-    if (status?.is_syncing && !forceRestart) {
-      throw new Error("同步正在进行中，请稍后再试");
-    }
-
-    // 2. 判断是否需要断点续传或清空数据
-    let startPage = 1;
-    let resumeSync = false;
+    // 1. 判断是否需要清空数据
     let shouldClearData = false;
 
-    if (
-      status?.is_syncing &&
-      status.sync_type === "full" &&
-      status.current_page > 0 &&
-      !forceRestart
-    ) {
-      // 断点续传
-      startPage = status.current_page;
-      resumeSync = true;
-      log(`检测到未完成的同步，从第 ${startPage} 页继续...`);
-      log(`已同步: ${status.synced_count} 个视频`);
-    } else if (forceRestart) {
+    if (forceRestart) {
       // 强制重启：清空数据
       shouldClearData = true;
       log("强制重启模式：将清空所有数据...");
@@ -113,20 +74,14 @@ export async function fullSync(
       log("使用覆盖模式同步（不清空现有数据）...");
     }
 
-    // 重置同步状态
-    await updateSyncStatus({
-      is_syncing: true,
-      sync_type: "full",
-      total_videos: 0,
-      current_page: 0,
-      total_pages: 0,
-      synced_count: 0,
-    });
+    let startPage = 1;
+    let totalAdded = 0;
+    let totalUpdated = 0;
 
-    // 3. 设置请求间隔
+    // 2. 设置请求间隔
     sourceClient.setMinRequestInterval(config.requestInterval);
 
-    // 4. 获取视频总数
+    // 3. 获取视频总数
     const firstPage = await sourceClient.getList(1, 1);
     const totalVideos = firstPage.total;
     const totalPages = Math.ceil(totalVideos / config.batchSize);
@@ -134,31 +89,14 @@ export async function fullSync(
 
     if (totalVideos === 0) {
       log("没有视频需要同步");
-      await updateSyncStatus({
-        is_syncing: false,
-        sync_type: "",
-        total_videos: 0,
-      });
       return { added: 0, updated: 0 };
     }
 
-    // 更新总页数
-    await updateSyncStatus({
-      total_pages: totalPages,
-    });
-
-    // 5. 分页同步视频
-    let totalProcessed = resumeSync ? status?.synced_count || 0 : 0;
-    let totalAdded = resumeSync ? 0 : 0;
-    let totalUpdated = 0;
+    // 4. 分页同步视频
+    let totalProcessed = 0;
 
     for (let page = startPage; page <= totalPages; page++) {
       try {
-        // 更新当前页码
-        await updateSyncStatus({
-          current_page: page,
-        });
-
         // 获取视频列表
         const listResponse = await sourceClient.getList(page, config.batchSize);
         const videoList = listResponse.list;
@@ -184,10 +122,6 @@ export async function fullSync(
         totalProcessed += validVideos.length;
 
         // 更新进度
-        await updateSyncStatus({
-          synced_count: totalProcessed,
-        });
-
         const message = `已同步 ${totalProcessed}/${totalVideos} 个视频 (第 ${page}/${totalPages} 页, 新增: ${totalAdded}, 更新: ${totalUpdated})`;
         logProgress(totalProcessed, totalVideos, message);
 
@@ -208,29 +142,12 @@ export async function fullSync(
         }
       } catch (error) {
         log(`第 ${page} 页同步失败: ${error}`);
-        // 保持 is_syncing 为 true，以便断点续传
-        await updateSyncStatus({
-          is_syncing: true,
-          current_page: page,
-        });
         throw error;
       }
     }
 
-    // 6. 获取最终统计
+    // 5. 获取最终统计
     const stats = await getDatabaseStats();
-
-    // 7. 更新同步状态
-    await updateSyncStatus({
-      is_syncing: false,
-      sync_type: "",
-      last_sync_time: new Date().toISOString(),
-      total_videos: stats.totalVideos,
-      total_categories: stats.totalCategories,
-      current_page: 0,
-      total_pages: 0,
-      synced_count: 0,
-    });
 
     log("========================================");
     log("完整同步完成");
@@ -243,10 +160,6 @@ export async function fullSync(
     return { added: totalAdded, updated: totalUpdated };
   } catch (error) {
     log(`同步失败: ${error}`);
-    // 保持 is_syncing 为 true，以便断点续传
-    await updateSyncStatus({
-      is_syncing: true,
-    });
     throw error;
   }
 }
@@ -269,39 +182,25 @@ export async function incrementalSync(
   log("========================================");
 
   try {
-    // 1. 检查是否正在同步
-    const status = await getSyncStatus();
-    if (status?.is_syncing) {
-      throw new Error("同步正在进行中，请稍后再试");
-    }
-
-    // 2. 设置同步状态
-    await updateSyncStatus({
-      is_syncing: true,
-    });
-
-    // 3. 设置请求间隔
+    // 1. 设置请求间隔
     sourceClient.setMinRequestInterval(config.requestInterval);
 
-    // 4. 计算时间范围
+    // 2. 计算时间范围
     const now = new Date();
     const syncStartDate = new Date(now.getTime() - hours * 60 * 60 * 1000);
     log(`同步时间: ${syncStartDate.toISOString()} 之后的数据`);
 
-    // 5. 获取视频总数
+    // 3. 获取视频总数
     const firstPage = await sourceClient.getList(1, 1);
     const totalVideos = firstPage.total;
     log(`视频总数: ${totalVideos}`);
 
     if (totalVideos === 0) {
       log("没有视频需要同步");
-      await updateSyncStatus({
-        is_syncing: false,
-      });
       return { added: 0, updated: 0 };
     }
 
-    // 6. 分页检查并同步更新的视频
+    // 4. 分页检查并同步更新的视频
     let page = 1;
     let totalProcessed = 0;
     let totalAdded = 0;
@@ -409,16 +308,8 @@ export async function incrementalSync(
       }
     }
 
-    // 7. 获取最终统计
+    // 5. 获取最终统计
     const stats = await getDatabaseStats();
-
-    // 8. 更新同步状态
-    await updateSyncStatus({
-      is_syncing: false,
-      last_sync_time: new Date().toISOString(),
-      total_videos: stats.totalVideos,
-      total_categories: stats.totalCategories,
-    });
 
     log("========================================");
     log("增量同步完成");
@@ -431,9 +322,6 @@ export async function incrementalSync(
     return { added: totalAdded, updated: totalUpdated };
   } catch (error) {
     log(`增量同步失败: ${error}`);
-    await updateSyncStatus({
-      is_syncing: false,
-    });
     throw error;
   }
 }
@@ -455,25 +343,10 @@ export async function resync(
   log("========================================");
 
   try {
-    // 1. 检查是否正在同步
-    const status = await getSyncStatus();
-    if (status?.is_syncing) {
-      throw new Error("同步正在进行中，请稍后再试");
-    }
-
-    // 2. 设置同步状态
-    await updateSyncStatus({
-      is_syncing: true,
-      sync_type: "resync",
-      total_videos: 0,
-      current_page: 0,
-      synced_count: 0,
-    });
-
-    // 3. 设置请求间隔
+    // 1. 设置请求间隔
     sourceClient.setMinRequestInterval(config.requestInterval);
 
-    // 4. 获取视频总数
+    // 2. 获取视频总数
     const firstPage = await sourceClient.getList(1, 1);
     const totalVideos = firstPage.total;
     const totalPages = Math.ceil(totalVideos / config.batchSize);
@@ -482,14 +355,10 @@ export async function resync(
 
     if (totalVideos === 0) {
       log("没有视频需要同步");
-      await updateSyncStatus({
-        is_syncing: false,
-        sync_type: "",
-      });
       return { added: 0, updated: 0 };
     }
 
-    // 5. 分页检查并补充缺失的视频
+    // 3. 分页检查并补充缺失的视频
     let totalChecked = 0;
     let totalAdded = 0;
     let totalUpdated = 0;
@@ -497,11 +366,6 @@ export async function resync(
 
     for (let page = 1; page <= totalPages; page++) {
       try {
-        // 更新当前页码
-        await updateSyncStatus({
-          current_page: page,
-        });
-
         // 获取视频列表
         const listResponse = await sourceClient.getList(page, config.batchSize);
         const videoList = listResponse.list;
@@ -538,10 +402,6 @@ export async function resync(
         totalChecked += videoList.length;
 
         // 更新进度
-        await updateSyncStatus({
-          synced_count: totalChecked,
-        });
-
         const message = `已检查 ${totalChecked}/${totalVideos} 个视频，补充 ${totalAdded} 个缺失`;
         logProgress(totalChecked, totalVideos, message);
 
@@ -566,19 +426,8 @@ export async function resync(
       }
     }
 
-    // 6. 获取最终统计
+    // 4. 获取最终统计
     const stats = await getDatabaseStats();
-
-    // 7. 更新同步状态
-    await updateSyncStatus({
-      is_syncing: false,
-      sync_type: "",
-      last_sync_time: new Date().toISOString(),
-      total_videos: stats.totalVideos,
-      current_page: 0,
-      total_pages: 0,
-      synced_count: 0,
-    });
 
     log("========================================");
     log("补充同步完成");
@@ -591,9 +440,6 @@ export async function resync(
     return { added: totalAdded, updated: totalUpdated };
   } catch (error) {
     log(`补充同步失败: ${error}`);
-    await updateSyncStatus({
-      is_syncing: false,
-    });
     throw error;
   }
 }

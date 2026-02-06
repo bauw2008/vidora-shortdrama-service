@@ -6,7 +6,7 @@ import {
   remove,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
@@ -32,29 +32,23 @@ export async function onRequestGet(context) {
       // 获取单个 API 源
       const data = await select(supabaseUrl, supabaseAnonKey, "api_sources", {
         filter: `id=eq.${id}`,
-        single: true
+        single: true,
       });
 
-      return new Response(
-        JSON.stringify({ success: true, data }),
-        {
-          headers: { "Content-Type": "application/json" },
-          status: 200,
-        },
-      );
+      return new Response(JSON.stringify({ success: true, data }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
     } else {
       // 获取所有 API 源
       const data = await select(supabaseUrl, supabaseAnonKey, "api_sources", {
-        orderBy: "created_at.desc"
+        orderBy: "created_at.desc",
       });
 
-      return new Response(
-        JSON.stringify({ success: true, data }),
-        {
-          headers: { "Content-Type": "application/json" },
-          status: 200,
-        },
-      );
+      return new Response(JSON.stringify({ success: true, data }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
     }
   } catch (error) {
     console.error("获取 API 源失败:", error);
@@ -98,7 +92,8 @@ export async function onRequestPost(context) {
 
       const response = await fetch(testUrl, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
       });
 
@@ -116,7 +111,10 @@ export async function onRequestPost(context) {
 
       if (data && data.code === 1 && data.list) {
         return new Response(
-          JSON.stringify({ success: true, data: { total: data.total || data.list.length } }),
+          JSON.stringify({
+            success: true,
+            data: { total: data.total || data.list.length },
+          }),
           {
             headers: { "Content-Type": "application/json" },
             status: 200,
@@ -140,10 +138,18 @@ export async function onRequestPost(context) {
 
       try {
         // 先禁用所有源
-        await supabaseUpdate(supabaseUrl, supabaseAnonKey, "api_sources", { is_active: false });
+        await supabaseUpdate(supabaseUrl, supabaseAnonKey, "api_sources", {
+          is_active: false,
+        });
 
         // 启用指定源
-        await supabaseUpdate(supabaseUrl, supabaseAnonKey, "api_sources", { is_active: true }, `id=eq.${id}`);
+        await supabaseUpdate(
+          supabaseUrl,
+          supabaseAnonKey,
+          "api_sources",
+          { is_active: true },
+          `id=eq.${id}`,
+        );
 
         resetServiceRoleKey();
 
@@ -169,18 +175,15 @@ export async function onRequestPost(context) {
         const data = await insert(supabaseUrl, supabaseAnonKey, "api_sources", {
           name,
           url,
-          is_active: false
+          is_active: false,
         });
 
         resetServiceRoleKey();
 
-        return new Response(
-          JSON.stringify({ success: true, data }),
-          {
-            headers: { "Content-Type": "application/json" },
-            status: 200,
-          },
-        );
+        return new Response(JSON.stringify({ success: true, data }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
       } catch (error) {
         resetServiceRoleKey();
         throw error;

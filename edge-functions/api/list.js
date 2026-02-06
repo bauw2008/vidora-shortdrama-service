@@ -1,21 +1,23 @@
 // Supabase REST API helpers (lightweight)
 function getHeaders(supabaseKey) {
   return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": "application/json",
   };
 }
 
 // KV 缓存辅助函数
 async function getCachedValue(kv, key, ttl, fetchFn) {
-  if (!kv || typeof kv.get !== 'function' || typeof kv.put !== 'function') {
-    console.log(`DEBUG [KV Cache]: KV not available, fetching directly - ${key}`);
+  if (!kv || typeof kv.get !== "function" || typeof kv.put !== "function") {
+    console.log(
+      `DEBUG [KV Cache]: KV not available, fetching directly - ${key}`,
+    );
     return await fetchFn();
   }
 
   try {
-    const cached = await kv.get(key, { type: 'json' });
+    const cached = await kv.get(key, { type: "json" });
     if (cached) {
       console.log(`DEBUG [KV Cache]: HIT - ${key}`);
       return cached;
@@ -43,18 +45,18 @@ async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, tag) {
   try {
     const rpcUrl = `${supabaseUrl}/rest/v1/rpc/get_videos_count_with_search`;
     const response = await fetch(rpcUrl, {
-      method: 'POST',
+      method: "POST",
       headers: getHeaders(supabaseKey),
       body: JSON.stringify({
         p_category_id: categoryId,
         p_keyword: null,
-        p_tag: tag ? JSON.stringify([tag]) : null
-      })
+        p_tag: tag ? JSON.stringify([tag]) : null,
+      }),
     });
 
     if (response.ok) {
       const count = await response.json();
-      return typeof count === 'number' ? count : 0;
+      return typeof count === "number" ? count : 0;
     }
   } catch (error) {
     console.error("DEBUG [getFilteredCount]: RPC 调用失败", error);
@@ -64,19 +66,27 @@ async function getFilteredCount(supabaseUrl, supabaseKey, categoryId, tag) {
 }
 
 async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', offset = '', single = false, count = false } = options;
+  const {
+    columns = "*",
+    filter = "",
+    orderBy = "",
+    limit = "",
+    offset = "",
+    single = false,
+    count = false,
+  } = options;
   let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
 
   if (filter) url += `&${filter}`;
   if (orderBy) url += `&order=${orderBy}`;
   if (limit) url += `&limit=${limit}`;
   if (offset) url += `&offset=${offset}`;
-  if (single) url += '&limit=1';
+  if (single) url += "&limit=1";
 
   // 对于 count 查询，添加 Prefer 头
   const headers = getHeaders(supabaseKey);
   if (count) {
-    headers['Prefer'] = 'count=exact';
+    headers["Prefer"] = "count=exact";
   }
 
   const response = await fetch(url, { headers });
@@ -93,16 +103,18 @@ async function select(supabaseUrl, supabaseKey, table, options = {}) {
   if (count) {
     // 打印所有响应头用于调试
     console.log("DEBUG [select]: Getting all response headers...");
-    const contentRange = response.headers.get('content-range');
+    const contentRange = response.headers.get("content-range");
     console.log("DEBUG [select]: content-range =", contentRange);
 
     if (contentRange) {
-      const total = contentRange.split('/')[1];
+      const total = contentRange.split("/")[1];
       console.log("DEBUG [select]: total count from content-range =", total);
       return parseInt(total, 10);
     }
     // 如果没有 Content-Range，返回数据长度作为备用
-    console.log("DEBUG [select]: No content-range, using data length as fallback");
+    console.log(
+      "DEBUG [select]: No content-range, using data length as fallback",
+    );
     try {
       const data = await response.json();
       return Array.isArray(data) ? data.length : 0;
@@ -112,20 +124,23 @@ async function select(supabaseUrl, supabaseKey, table, options = {}) {
   }
 
   const data = await response.json();
-  return single ? (data[0] || null) : data;
+  return single ? data[0] || null : data;
 }
 
 async function getApiConfig(supabaseUrl, supabaseKey) {
-  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
+  if (typeof vidora_cache === "undefined" || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/api_config?select=auth_enabled&limit=1`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/api_config?select=auth_enabled&limit=1`,
+        {
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
       if (response.ok) {
         const data = await response.json();
         return data[0];
@@ -136,41 +151,39 @@ async function getApiConfig(supabaseUrl, supabaseKey) {
     return { auth_enabled: false };
   }
   // 使用 KV 缓存，5 分钟过期
-  return getCachedValue(
-    vidora_cache,
-    'api_config',
-    300,
-    async () => {
-      try {
-        const response = await fetch(`${supabaseUrl}/rest/v1/api_config?select=auth_enabled&limit=1`, {
+  return getCachedValue(vidora_cache, "api_config", 300, async () => {
+    try {
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/api_config?select=auth_enabled&limit=1`,
+        {
           headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          return data[0];
-        }
-      } catch (error) {
-        console.error("获取 API 配置失败:", error);
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data[0];
       }
-      return { auth_enabled: false };
+    } catch (error) {
+      console.error("获取 API 配置失败:", error);
     }
-  );
+    return { auth_enabled: false };
+  });
 }
 
 // /api/list 支持认证开关
 async function verifyApiKey(context, adminApiKey, supabaseUrl, supabaseKey) {
   // 先获取 API 配置
   const config = await getApiConfig(supabaseUrl, supabaseKey, vidora_cache);
-  
+
   // 如果认证未启用，直接允许访问
   if (!config.auth_enabled) {
     return true;
   }
-  
+
   // 认证已启用，验证 API Key
   const apiKey =
     context.request.headers.get("X-API-Key") ||
@@ -194,7 +207,7 @@ async function checkIpBlacklist(supabaseUrl, supabaseKey, ip) {
     const data = await select(supabaseUrl, supabaseKey, "ip_blacklist", {
       columns: "id",
       filter: `ip_address=eq.${ip}`,
-      single: true
+      single: true,
     });
     return !!data;
   } catch {
@@ -203,35 +216,38 @@ async function checkIpBlacklist(supabaseUrl, supabaseKey, ip) {
 }
 
 async function getRateLimitConfig(supabaseUrl, supabaseKey) {
-  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
+  if (typeof vidora_cache === "undefined" || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
       return await select(supabaseUrl, supabaseKey, "api_config", {
         columns: "rate_limit_minute,rate_limit_hourly,rate_limit_daily",
         orderBy: "id.asc",
         limit: "1",
-        single: true
+        single: true,
       });
     } catch {
       return null;
     }
   }
   // 使用 KV 缓存，5 分钟过期
-  return getCachedValue(
-    vidora_cache,
-    'rate_limit_config',
-    300,
-    () => select(supabaseUrl, supabaseKey, "api_config", {
+  return getCachedValue(vidora_cache, "rate_limit_config", 300, () =>
+    select(supabaseUrl, supabaseKey, "api_config", {
       columns: "rate_limit_minute,rate_limit_hourly,rate_limit_daily",
       orderBy: "id.asc",
       limit: "1",
-      single: true
-    }).catch(() => null)
+      single: true,
+    }).catch(() => null),
   );
 }
 
 // 检查并记录速率限制
-async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, type, config) {
+async function checkAndRecordRateLimit(
+  supabaseUrl,
+  supabaseKey,
+  identifier,
+  type,
+  config,
+) {
   const now = new Date();
   const minuteWindow = new Date(
     now.getFullYear(),
@@ -240,7 +256,7 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
     now.getHours(),
     now.getMinutes(),
     0,
-    0
+    0,
   );
   const hourWindow = new Date(
     now.getFullYear(),
@@ -249,7 +265,7 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
     now.getHours(),
     0,
     0,
-    0
+    0,
   );
   const dayWindow = new Date(
     now.getFullYear(),
@@ -258,14 +274,14 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
     0,
     0,
     0,
-    0
+    0,
   );
 
   try {
     const existing = await select(supabaseUrl, supabaseKey, "api_rate_limits", {
       columns: "*",
       filter: `identifier=eq.${identifier}&type=eq.${type}`,
-      single: true
+      single: true,
     });
 
     let minuteCount = 0;
@@ -286,41 +302,44 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
         return {
           success: false,
           error: `超过每分钟限制 (${config.rate_limit_minute} 次/分钟)`,
-          remaining_minute: 0
+          remaining_minute: 0,
         };
       }
       if (hourlyCount >= config.rate_limit_hourly) {
         return {
           success: false,
           error: `超过每小时限制 (${config.rate_limit_hourly} 次/小时)`,
-          remaining_hourly: 0
+          remaining_hourly: 0,
         };
       }
       if (dailyCount >= config.rate_limit_daily) {
         return {
           success: false,
           error: `超过每天限制 (${config.rate_limit_daily} 次/天)`,
-          remaining_daily: 0
+          remaining_daily: 0,
         };
       }
 
       // 更新记录
-      await fetch(`${supabaseUrl}/rest/v1/api_rate_limits?id=eq.${existing.id}`, {
-        method: 'PATCH',
-        headers: getHeaders(supabaseKey),
-        body: JSON.stringify({
-          minute_count: minuteCount + 1,
-          hourly_count: hourlyCount + 1,
-          daily_count: dailyCount + 1,
-          minute_window: minuteWindow.toISOString(),
-          hour_window: hourWindow.toISOString(),
-          day_window: dayWindow.toISOString()
-        })
-      });
+      await fetch(
+        `${supabaseUrl}/rest/v1/api_rate_limits?id=eq.${existing.id}`,
+        {
+          method: "PATCH",
+          headers: getHeaders(supabaseKey),
+          body: JSON.stringify({
+            minute_count: minuteCount + 1,
+            hourly_count: hourlyCount + 1,
+            daily_count: dailyCount + 1,
+            minute_window: minuteWindow.toISOString(),
+            hour_window: hourWindow.toISOString(),
+            day_window: dayWindow.toISOString(),
+          }),
+        },
+      );
     } else {
       // 创建新记录
       await fetch(`${supabaseUrl}/rest/v1/api_rate_limits`, {
-        method: 'POST',
+        method: "POST",
         headers: getHeaders(supabaseKey),
         body: JSON.stringify({
           identifier,
@@ -330,8 +349,8 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
           daily_count: 1,
           minute_window: minuteWindow.toISOString(),
           hour_window: hourWindow.toISOString(),
-          day_window: dayWindow.toISOString()
-        })
+          day_window: dayWindow.toISOString(),
+        }),
       });
 
       minuteCount = 1;
@@ -343,7 +362,7 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
       success: true,
       remaining_minute: config.rate_limit_minute - minuteCount,
       remaining_hourly: config.rate_limit_hourly - hourlyCount,
-      remaining_daily: config.rate_limit_daily - dailyCount
+      remaining_daily: config.rate_limit_daily - dailyCount,
     };
   } catch (error) {
     console.error("速率限制检查失败:", error);
@@ -351,7 +370,7 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
       success: true,
       remaining_minute: config.rate_limit_minute,
       remaining_hourly: config.rate_limit_hourly,
-      remaining_daily: config.rate_limit_daily
+      remaining_daily: config.rate_limit_daily,
     };
   }
 }
@@ -360,9 +379,9 @@ async function checkAndRecordRateLimit(supabaseUrl, supabaseKey, identifier, typ
 async function logApiCall(supabaseUrl, supabaseKey, data) {
   try {
     await fetch(`${supabaseUrl}/rest/v1/api_logs`, {
-      method: 'POST',
+      method: "POST",
       headers: getHeaders(supabaseKey),
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   } catch (error) {
     console.error("API 日志记录失败:", error);
@@ -371,30 +390,27 @@ async function logApiCall(supabaseUrl, supabaseKey, data) {
 
 // 获取时区配置
 async function getTimezoneConfig(supabaseUrl, supabaseKey) {
-  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
+  if (typeof vidora_cache === "undefined" || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
       return await select(supabaseUrl, supabaseKey, "api_config", {
         columns: "timezone",
         orderBy: "id.asc",
         limit: "1",
-        single: true
+        single: true,
       });
     } catch {
       return { timezone: "Asia/Shanghai" };
     }
   }
   // 使用 KV 缓存，1 小时过期
-  return getCachedValue(
-    vidora_cache,
-    'timezone_config',
-    3600,
-    () => select(supabaseUrl, supabaseKey, "api_config", {
+  return getCachedValue(vidora_cache, "timezone_config", 3600, () =>
+    select(supabaseUrl, supabaseKey, "api_config", {
       columns: "timezone",
       orderBy: "id.asc",
       limit: "1",
-      single: true
-    }).catch(() => ({ timezone: "Asia/Shanghai" }))
+      single: true,
+    }).catch(() => ({ timezone: "Asia/Shanghai" })),
   );
 }
 
@@ -409,7 +425,7 @@ function getCurrentTimeInTimezone(timezone) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false
+    hour12: false,
   });
   const parts = formatter.formatToParts(now);
   const getPart = (type) => parts.find((p) => p.type === type)?.value || "";
@@ -419,14 +435,14 @@ function getCurrentTimeInTimezone(timezone) {
   if (hour === 24) {
     hour = 0;
   }
-  const hourStr = hour.toString().padStart(2, '0');
+  const hourStr = hour.toString().padStart(2, "0");
   const localTime = `${hourStr}:${getPart("minute")}:${getPart("second")}`;
   // 返回 ISO 格式的时间字符串，不带时区信息
   return `${localDate}T${localTime}`;
 }
 
 async function getEnabledFields(supabaseUrl, supabaseKey, endpoint) {
-  if (typeof vidora_cache === 'undefined' || vidora_cache === null) {
+  if (typeof vidora_cache === "undefined" || vidora_cache === null) {
     // 如果没有 KV，直接查询
     try {
       console.log("DEBUG [getEnabledFields]: endpoint =", endpoint);
@@ -435,10 +451,10 @@ async function getEnabledFields(supabaseUrl, supabaseKey, endpoint) {
       const data = await select(supabaseUrl, supabaseKey, "api_field_config", {
         columns: "field_name,display_order,is_enabled",
         filter: filter,
-        orderBy: "display_order.asc"
+        orderBy: "display_order.asc",
       });
       console.log("DEBUG [getEnabledFields]: data =", data);
-      const enabledData = data?.filter(f => f.is_enabled === true) || [];
+      const enabledData = data?.filter((f) => f.is_enabled === true) || [];
       console.log("DEBUG [getEnabledFields]: enabledData =", enabledData);
       return enabledData.map((f) => f.field_name);
     } catch (error) {
@@ -448,30 +464,25 @@ async function getEnabledFields(supabaseUrl, supabaseKey, endpoint) {
   }
   // 使用 KV 缓存，10 分钟过期
   const cacheKey = `enabled_fields_${endpoint}`;
-  return getCachedValue(
-    vidora_cache,
-    cacheKey,
-    600,
-    async () => {
-      try {
-        console.log("DEBUG [getEnabledFields]: endpoint =", endpoint);
-        const filter = `api_endpoint=eq.${endpoint}`;
-        console.log("DEBUG [getEnabledFields]: filter =", filter);
-        const data = await select(supabaseUrl, supabaseKey, "api_field_config", {
-          columns: "field_name,display_order,is_enabled",
-          filter: filter,
-          orderBy: "display_order.asc"
-        });
-        console.log("DEBUG [getEnabledFields]: data =", data);
-        const enabledData = data?.filter(f => f.is_enabled === true) || [];
-        console.log("DEBUG [getEnabledFields]: enabledData =", enabledData);
-        return enabledData.map((f) => f.field_name);
-      } catch (error) {
-        console.log("DEBUG [getEnabledFields]: error =", error);
-        return [];
-      }
+  return getCachedValue(vidora_cache, cacheKey, 600, async () => {
+    try {
+      console.log("DEBUG [getEnabledFields]: endpoint =", endpoint);
+      const filter = `api_endpoint=eq.${endpoint}`;
+      console.log("DEBUG [getEnabledFields]: filter =", filter);
+      const data = await select(supabaseUrl, supabaseKey, "api_field_config", {
+        columns: "field_name,display_order,is_enabled",
+        filter: filter,
+        orderBy: "display_order.asc",
+      });
+      console.log("DEBUG [getEnabledFields]: data =", data);
+      const enabledData = data?.filter((f) => f.is_enabled === true) || [];
+      console.log("DEBUG [getEnabledFields]: enabledData =", enabledData);
+      return enabledData.map((f) => f.field_name);
+    } catch (error) {
+      console.log("DEBUG [getEnabledFields]: error =", error);
+      return [];
     }
-  );
+  });
 }
 
 export async function onRequestGet(context) {
@@ -486,8 +497,11 @@ export async function onRequestGet(context) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return new Response(
-      JSON.stringify({ success: false, error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量" }),
-      { headers: { "Content-Type": "application/json" }, status: 500 }
+      JSON.stringify({
+        success: false,
+        error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量",
+      }),
+      { headers: { "Content-Type": "application/json" }, status: 500 },
     );
   }
 
@@ -506,36 +520,59 @@ export async function onRequestGet(context) {
     console.log("DEBUG [list GET]: Checking rate limit...");
     const config = await getRateLimitConfig(supabaseUrl, supabaseAnonKey);
     console.log("DEBUG [list GET]: config =", config);
-    if (config && (await checkIpBlacklist(supabaseUrl, supabaseAnonKey, clientIp))) {
+    if (
+      config &&
+      (await checkIpBlacklist(supabaseUrl, supabaseAnonKey, clientIp))
+    ) {
       responseStatus = 429;
       errorMessage = "IP 地址已被封禁";
       return new Response(
         JSON.stringify({ success: false, error: errorMessage }),
-        { headers: { "Content-Type": "application/json" }, status: responseStatus }
+        {
+          headers: { "Content-Type": "application/json" },
+          status: responseStatus,
+        },
       );
     }
 
     // 检查速率限制（始终生效，不受认证开关影响）
     if (config) {
-      rateLimitResult = await checkAndRecordRateLimit(supabaseUrl, supabaseAnonKey, clientIp, "ip", config);
+      rateLimitResult = await checkAndRecordRateLimit(
+        supabaseUrl,
+        supabaseAnonKey,
+        clientIp,
+        "ip",
+        config,
+      );
       if (!rateLimitResult.success) {
         responseStatus = 429;
         errorMessage = rateLimitResult.error;
         return new Response(
           JSON.stringify({ success: false, error: errorMessage }),
-          { headers: { "Content-Type": "application/json" }, status: responseStatus }
+          {
+            headers: { "Content-Type": "application/json" },
+            status: responseStatus,
+          },
         );
       }
     }
 
     console.log("DEBUG [list GET]: Verifying API key...");
-    const authValidated = await verifyApiKey(context, adminApiKey, supabaseUrl, supabaseAnonKey);
+    const authValidated = await verifyApiKey(
+      context,
+      adminApiKey,
+      supabaseUrl,
+      supabaseAnonKey,
+    );
     if (!authValidated) {
       responseStatus = 401;
       errorMessage = "未授权，需要有效的 API Key";
       return new Response(
         JSON.stringify({ success: false, error: errorMessage }),
-        { headers: { "Content-Type": "application/json" }, status: responseStatus }
+        {
+          headers: { "Content-Type": "application/json" },
+          status: responseStatus,
+        },
       );
     }
     console.log("DEBUG [list GET]: API key verified");
@@ -548,25 +585,29 @@ export async function onRequestGet(context) {
     if (page < 1) {
       return new Response(
         JSON.stringify({ success: false, error: "页码必须大于 0" }),
-        { headers: { "Content-Type": "application/json" }, status: 400 }
+        { headers: { "Content-Type": "application/json" }, status: 400 },
       );
     }
 
     if (pageSize < 1 || pageSize > 100) {
       return new Response(
         JSON.stringify({ success: false, error: "每页数量必须在 1-100 之间" }),
-        { headers: { "Content-Type": "application/json" }, status: 400 }
+        { headers: { "Content-Type": "application/json" }, status: 400 },
       );
     }
 
     console.log("DEBUG [list GET]: Getting enabled fields...");
-    const enabledFields = await getEnabledFields(supabaseUrl, supabaseAnonKey, "list");
+    const enabledFields = await getEnabledFields(
+      supabaseUrl,
+      supabaseAnonKey,
+      "list",
+    );
     console.log("DEBUG [list GET]: enabledFields =", enabledFields);
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let filter = '';
+    let filter = "";
 
     // 如果有 tag，直接查询 tags 字段
     if (tag) {
@@ -584,11 +625,16 @@ export async function onRequestGet(context) {
       filter: filter.substring(1),
       orderBy: "synced_at.desc",
       limit: pageSize.toString(),
-      offset: from.toString()
+      offset: from.toString(),
     });
 
     // 使用 RPC 获取过滤后的 count，传入 tag 参数
-    const countPromise = getFilteredCount(supabaseUrl, supabaseAnonKey, null, tag);
+    const countPromise = getFilteredCount(
+      supabaseUrl,
+      supabaseAnonKey,
+      null,
+      tag,
+    );
 
     const [data, count] = await Promise.all([dataPromise, countPromise]);
 
@@ -608,7 +654,7 @@ export async function onRequestGet(context) {
 
     // 异步记录日志（不阻塞响应）
     // 使用 then 完全异步执行，不阻塞响应
-    getTimezoneConfig(supabaseUrl, supabaseAnonKey).then(timezoneConfig => {
+    getTimezoneConfig(supabaseUrl, supabaseAnonKey).then((timezoneConfig) => {
       const logData = {
         ip_address: clientIp,
         api_endpoint: "/api/list",
@@ -623,7 +669,7 @@ export async function onRequestGet(context) {
         remaining_daily: rateLimitResult?.remaining_daily || null,
         response_time_ms: Date.now() - startTime,
         is_rate_limit_warning: false,
-        request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone)
+        request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone),
       };
       logApiCall(supabaseUrl, supabaseAnonKey, logData).catch(() => {});
     });
@@ -644,18 +690,20 @@ export async function onRequestGet(context) {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+          "Access-Control-Allow-Headers":
+            "Content-Type, Authorization, X-API-Key",
         },
         status: 200,
-      }
+      },
     );
   } catch (error) {
     console.error("获取视频列表失败:", error);
-    const errorMsg = error instanceof Error ? error.message : "获取视频列表失败";
+    const errorMsg =
+      error instanceof Error ? error.message : "获取视频列表失败";
 
     // 异步记录错误日志
     // 使用 then 完全异步执行，不阻塞响应
-    getTimezoneConfig(supabaseUrl, supabaseAnonKey).then(timezoneConfig => {
+    getTimezoneConfig(supabaseUrl, supabaseAnonKey).then((timezoneConfig) => {
       const logData = {
         ip_address: clientIp,
         api_endpoint: "/api/list",
@@ -670,14 +718,14 @@ export async function onRequestGet(context) {
         remaining_daily: rateLimitResult?.remaining_daily || null,
         response_time_ms: Date.now() - startTime,
         is_rate_limit_warning: false,
-        request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone)
+        request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone),
       };
       logApiCall(supabaseUrl, supabaseAnonKey, logData).catch(() => {});
     });
 
-    return new Response(
-      JSON.stringify({ success: false, error: errorMsg }),
-      { headers: { "Content-Type": "application/json" }, status: 500 }
-    );
+    return new Response(JSON.stringify({ success: false, error: errorMsg }), {
+      headers: { "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 }

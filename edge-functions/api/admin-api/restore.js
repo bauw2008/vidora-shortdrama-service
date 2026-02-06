@@ -5,7 +5,7 @@ import {
   remove,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestPost(context) {
@@ -15,10 +15,16 @@ export async function onRequestPost(context) {
   const adminApiKey = env.ADMIN_API_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return new Response(JSON.stringify({ success: false, error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量",
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
 
   if (!verifyAdminApiKey(context, adminApiKey)) {
@@ -39,10 +45,13 @@ export async function onRequestPost(context) {
 
     if (!file) {
       resetServiceRoleKey();
-      return new Response(JSON.stringify({ success: false, error: "缺少文件" }), {
-        headers: { "Content-Type": "application/json" },
-        status: 400,
-      });
+      return new Response(
+        JSON.stringify({ success: false, error: "缺少文件" }),
+        {
+          headers: { "Content-Type": "application/json" },
+          status: 400,
+        },
+      );
     }
 
     const text = await file.text();
@@ -50,7 +59,7 @@ export async function onRequestPost(context) {
 
     const results = {
       success: true,
-      tables: {}
+      tables: {},
     };
 
     // 单表恢复
@@ -60,10 +69,13 @@ export async function onRequestPost(context) {
 
       if (data.length === 0) {
         resetServiceRoleKey();
-        return new Response(JSON.stringify({ success: true, message: "没有数据需要恢复" }), {
-          headers: { "Content-Type": "application/json" },
-          status: 200,
-        });
+        return new Response(
+          JSON.stringify({ success: true, message: "没有数据需要恢复" }),
+          {
+            headers: { "Content-Type": "application/json" },
+            status: 200,
+          },
+        );
       }
 
       // 清空现有数据
@@ -96,14 +108,15 @@ export async function onRequestPost(context) {
       return new Response(
         JSON.stringify({
           success: true,
-          data: results.tables
+          data: results.tables,
         }),
         {
           headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+            "Access-Control-Allow-Headers":
+              "Content-Type, Authorization, X-API-Key",
           },
           status: 200,
         },
@@ -112,15 +125,35 @@ export async function onRequestPost(context) {
 
     // 全量恢复
     if (backupData.tables) {
-      const validTables = ["videos", "categories", "sub_categories", "api_sources", "sync_schedules", "api_config", "api_logs", "ip_blacklist"];
+      const validTables = [
+        "videos",
+        "categories",
+        "sub_categories",
+        "api_sources",
+        "sync_schedules",
+        "api_config",
+        "api_logs",
+        "ip_blacklist",
+      ];
 
       // 按顺序恢复表
-      const restoreOrder = ["categories", "sub_categories", "videos", "api_sources", "sync_schedules", "api_config", "ip_blacklist", "api_logs"];
+      const restoreOrder = [
+        "categories",
+        "sub_categories",
+        "videos",
+        "api_sources",
+        "sync_schedules",
+        "api_config",
+        "ip_blacklist",
+        "api_logs",
+      ];
 
       for (const tableName of restoreOrder) {
         if (!backupData.tables[tableName]) continue;
 
-        const data = Array.isArray(backupData.tables[tableName]) ? backupData.tables[tableName] : [];
+        const data = Array.isArray(backupData.tables[tableName])
+          ? backupData.tables[tableName]
+          : [];
 
         if (data.length === 0) {
           results.tables[tableName] = { inserted: 0, failed: 0, total: 0 };
@@ -160,14 +193,15 @@ export async function onRequestPost(context) {
       return new Response(
         JSON.stringify({
           success: true,
-          data: results.tables
+          data: results.tables,
         }),
         {
           headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+            "Access-Control-Allow-Headers":
+              "Content-Type, Authorization, X-API-Key",
           },
           status: 200,
         },
@@ -175,10 +209,13 @@ export async function onRequestPost(context) {
     }
 
     resetServiceRoleKey();
-    return new Response(JSON.stringify({ success: false, error: "无效的备份文件格式" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 400,
-    });
+    return new Response(
+      JSON.stringify({ success: false, error: "无效的备份文件格式" }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 400,
+      },
+    );
   } catch (error) {
     resetServiceRoleKey();
     console.error("恢复失败:", error);

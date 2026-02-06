@@ -12,14 +12,14 @@ export async function onRequestPost(context) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: "未配置管理员凭据"
+        error: "未配置管理员凭据",
       }),
       {
         status: 500,
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   }
 
@@ -35,41 +35,41 @@ export async function onRequestPost(context) {
       return new Response(
         JSON.stringify({
           success: true,
-          token: adminApiKey
+          token: adminApiKey,
         }),
         {
           status: 200,
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     } else {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "用户名或密码错误"
+          error: "用户名或密码错误",
         }),
         {
           status: 401,
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
   } catch (error) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: "服务器错误"
+        error: "服务器错误",
       }),
       {
         status: 500,
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   }
 }

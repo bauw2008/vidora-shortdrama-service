@@ -6,7 +6,7 @@ import {
   remove,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
@@ -24,16 +24,13 @@ export async function onRequestGet(context) {
 
   try {
     const data = await select(supabaseUrl, supabaseAnonKey, "sub_categories", {
-      orderBy: "name.asc"
+      orderBy: "name.asc",
     });
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({
@@ -66,17 +63,19 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
-    const data = await insert(supabaseUrl, supabaseAnonKey, "sub_categories", body);
+    const data = await insert(
+      supabaseUrl,
+      supabaseAnonKey,
+      "sub_categories",
+      body,
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     return new Response(
@@ -112,17 +111,20 @@ export async function onRequestPut(context) {
     const body = await request.json();
     const { id, ...updateData } = body;
 
-    const data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "sub_categories", updateData, `id=eq.${id}`);
+    const data = await supabaseUpdate(
+      supabaseUrl,
+      supabaseAnonKey,
+      "sub_categories",
+      updateData,
+      `id=eq.${id}`,
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     return new Response(

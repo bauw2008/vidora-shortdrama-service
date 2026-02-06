@@ -4,18 +4,18 @@ import {
   selectCount,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 async function deleteLogs(supabaseUrl, supabaseKey, filter) {
   const url = `${supabaseUrl}/rest/v1/api_logs?${filter}`;
   const response = await fetch(url, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
-      'Content-Type': 'application/json'
-    }
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+      "Content-Type": "application/json",
+    },
   });
 
   if (!response.ok) {
@@ -33,10 +33,16 @@ export async function onRequestGet(context) {
   const adminApiKey = env.ADMIN_API_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return new Response(JSON.stringify({ success: false, error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量" }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "缺少 SUPABASE_URL 或 SUPABASE_ANON_KEY 环境变量",
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
 
   if (!verifyAdminApiKey(context, adminApiKey)) {
@@ -56,7 +62,7 @@ export async function onRequestGet(context) {
 
     const from = (page - 1) * pageSize;
 
-    let filter = '';
+    let filter = "";
     if (ipFilter) filter += `&ip_address=eq.${ipFilter}`;
     if (endpointFilter) filter += `&api_endpoint=eq.${endpointFilter}`;
     if (statusFilter) filter += `&response_status=eq.${statusFilter}`;
@@ -67,19 +73,27 @@ export async function onRequestGet(context) {
         filter: filter.substring(1),
         orderBy: "request_time.desc",
         limit: pageSize.toString(),
-        offset: from.toString()
+        offset: from.toString(),
       }),
-      selectCount(supabaseUrl, supabaseAnonKey, "api_logs", filter.substring(1)),
+      selectCount(
+        supabaseUrl,
+        supabaseAnonKey,
+        "api_logs",
+        filter.substring(1),
+      ),
       select(supabaseUrl, supabaseAnonKey, "api_config", {
         columns: "auto_clean_threshold,max_log_count",
         orderBy: "id.asc",
         limit: "1",
-        single: true
-      })
+        single: true,
+      }),
     ]);
 
-    const config = configData || { auto_clean_threshold: 80000, max_log_count: 100000 };
-    
+    const config = configData || {
+      auto_clean_threshold: 80000,
+      max_log_count: 100000,
+    };
+
     // 计算统计信息
     const estimatedSizeMB = ((total * 500) / 1024 / 1024).toFixed(2); // 假设每条日志约500字节
 
@@ -89,7 +103,7 @@ export async function onRequestGet(context) {
       maxLogCount: config.max_log_count,
       autoCleanThreshold: config.auto_clean_threshold,
       autoCleanDays: Math.floor(config.auto_clean_threshold / 10000), // 假设每天10000条
-      timezone: "Asia/Shanghai"
+      timezone: "Asia/Shanghai",
     };
 
     return new Response(
@@ -109,7 +123,8 @@ export async function onRequestGet(context) {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+          "Access-Control-Allow-Headers":
+            "Content-Type, Authorization, X-API-Key",
         },
         status: 200,
       },
@@ -152,18 +167,29 @@ export async function onRequestDelete(context) {
 
     // 自动清理：根据配置的阈值计算删除日期
     if (autoClean) {
-      const configData = await select(supabaseUrl, supabaseAnonKey, "api_config", {
-        columns: "auto_clean_threshold",
-        orderBy: "id.asc",
-        limit: "1",
-        single: true
-      });
+      const configData = await select(
+        supabaseUrl,
+        supabaseAnonKey,
+        "api_config",
+        {
+          columns: "auto_clean_threshold",
+          orderBy: "id.asc",
+          limit: "1",
+          single: true,
+        },
+      );
 
-      const thresholdDays = Math.floor((configData?.auto_clean_threshold || 80000) / 10000);
+      const thresholdDays = Math.floor(
+        (configData?.auto_clean_threshold || 80000) / 10000,
+      );
       const now = new Date();
       now.setDate(now.getDate() - thresholdDays);
       const autoCleanDate = now.toISOString();
-      const result = await deleteLogs(supabaseUrl, supabaseAnonKey, `request_time=lt.${autoCleanDate}`);
+      const result = await deleteLogs(
+        supabaseUrl,
+        supabaseAnonKey,
+        `request_time=lt.${autoCleanDate}`,
+      );
       resetServiceRoleKey();
       return new Response(
         JSON.stringify({ success: true, message: "自动清理成功" }),
@@ -172,10 +198,11 @@ export async function onRequestDelete(context) {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+            "Access-Control-Allow-Headers":
+              "Content-Type, Authorization, X-API-Key",
           },
           status: 200,
-        }
+        },
       );
     }
 
@@ -191,7 +218,11 @@ export async function onRequestDelete(context) {
       );
     }
 
-    const result = await deleteLogs(supabaseUrl, supabaseAnonKey, `request_time=lt.${beforeDate}`);
+    const result = await deleteLogs(
+      supabaseUrl,
+      supabaseAnonKey,
+      `request_time=lt.${beforeDate}`,
+    );
     resetServiceRoleKey();
     return new Response(
       JSON.stringify({ success: true, message: "手动删除成功" }),
@@ -200,10 +231,11 @@ export async function onRequestDelete(context) {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+          "Access-Control-Allow-Headers":
+            "Content-Type, Authorization, X-API-Key",
         },
         status: 200,
-      }
+      },
     );
   } catch (error) {
     resetServiceRoleKey();

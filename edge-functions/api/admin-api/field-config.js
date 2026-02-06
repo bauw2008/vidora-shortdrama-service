@@ -6,7 +6,7 @@ import {
   remove,
   setServiceRoleKey,
   resetServiceRoleKey,
-  verifyAdminApiKey
+  verifyAdminApiKey,
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
@@ -28,18 +28,20 @@ export async function onRequestGet(context) {
     const url = new URL(request.url);
     const apiEndpoint = url.searchParams.get("apiEndpoint") || "list";
 
-    const data = await select(supabaseUrl, supabaseAnonKey, "api_field_config", {
-      filter: `api_endpoint=eq.${apiEndpoint}`,
-      orderBy: "display_order.asc"
-    });
-
-    return new Response(
-      JSON.stringify({ success: true, data }),
+    const data = await select(
+      supabaseUrl,
+      supabaseAnonKey,
+      "api_field_config",
       {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
+        filter: `api_endpoint=eq.${apiEndpoint}`,
+        orderBy: "display_order.asc",
       },
     );
+
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     console.error("获取字段配置失败:", error);
     return new Response(
@@ -76,17 +78,19 @@ export async function onRequestPost(context) {
   try {
     const body = await request.json();
 
-    const data = await insert(supabaseUrl, supabaseAnonKey, "api_field_config", body);
+    const data = await insert(
+      supabaseUrl,
+      supabaseAnonKey,
+      "api_field_config",
+      body,
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     console.error("创建字段配置失败:", error);
@@ -136,17 +140,20 @@ export async function onRequestPut(context) {
       );
     }
 
-    const data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "api_field_config", updateData, `id=eq.${id}`);
+    const data = await supabaseUpdate(
+      supabaseUrl,
+      supabaseAnonKey,
+      "api_field_config",
+      updateData,
+      `id=eq.${id}`,
+    );
 
     resetServiceRoleKey();
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
     resetServiceRoleKey();
     console.error("更新字段配置失败:", error);
@@ -196,7 +203,12 @@ export async function onRequestDelete(context) {
       );
     }
 
-    await remove(supabaseUrl, supabaseAnonKey, "api_field_config", `id=eq.${id}`);
+    await remove(
+      supabaseUrl,
+      supabaseAnonKey,
+      "api_field_config",
+      `id=eq.${id}`,
+    );
 
     resetServiceRoleKey();
 
