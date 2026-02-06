@@ -31,11 +31,34 @@ pnpm install
 复制 `.env.example` 为 `.env` 并填写配置：
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+# Supabase 数据库配置
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # ⚠️ 必需：用于数据库写入操作
+
+# API 源配置
 API_SOURCE_URL=https://api/api.php/provide/vod/
+
+# 管理后台认证
 ADMIN_API_KEY=your-secret-api-key
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-password
+
+# EdgeOne 部署（可选）
+EDGEONE_API_TOKEN=your-edgeone-token
 ```
+
+#### 获取 SUPABASE_SERVICE_ROLE_KEY
+
+1. 登录 [Supabase Dashboard](https://supabase.com/dashboard)
+2. 选择你的项目
+3. 进入 **Settings** → **API**
+4. 在 **Project API keys** 部分找到 **service_role** (secret) key
+
+⚠️ **安全提示**：
+- `SUPABASE_SERVICE_ROLE_KEY` 拥有绕过 RLS 的完全权限
+- **绝不能暴露在前端代码中**
+- 只在服务器端 Edge Functions 中使用
 
 ### 4. 运行开发服务器
 

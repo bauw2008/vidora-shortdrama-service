@@ -1,90 +1,12 @@
-// Supabase REST API helpers (lightweight)
-function getHeaders(supabaseKey) {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', offset = '', single = false } = options;
-  let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
-
-  if (filter) url += `&${filter}`;
-  if (orderBy) url += `&order=${orderBy}`;
-  if (limit) url += `&limit=${limit}`;
-  if (offset) url += `&offset=${offset}`;
-  if (single) url += '&limit=1';
-
-  const response = await fetch(url, { headers: getHeaders(supabaseKey) });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase error: ${response.status} - ${text}`);
-  }
-
-  const data = await response.json();
-  return single ? (data[0] || null) : data;
-}
-
-async function insert(supabaseUrl, supabaseKey, table, data) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: getHeaders(supabaseKey),
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase error: ${response.status} - ${text}`);
-  }
-
-  return response.json();
-}
-
-async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = '') {
-  let url = `${supabaseUrl}/rest/v1/${table}`;
-  if (filter) url += `?${filter}`;
-
-  const headers = getHeaders(supabaseKey);
-  headers['Prefer'] = 'return=representation';
-
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers: headers,
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok && response.status !== 204) {
-    const text = await response.text();
-    throw new Error(`Supabase error: ${response.status} - ${text}`);
-  }
-
-  // 204 状态码表示成功但没有返回数据
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    return authHeader.substring(7) === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
-}
+// Supabase REST API helpers (from shared)
+import {
+  select,
+  insert,
+  supabaseUpdate,
+  setServiceRoleKey,
+  resetServiceRoleKey,
+  verifyAdminApiKey
+} from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
   const { env } = context;
@@ -158,6 +80,9 @@ export async function onRequestPost(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const body = await context.request.json();
     console.log("DEBUG [api-config POST]: body =", body);
@@ -182,6 +107,9 @@ export async function onRequestPost(context) {
       }
     }
 
+    // 重置 service_role key
+    resetServiceRoleKey();
+
     return new Response(JSON.stringify({ success: true, data }), {
       headers: {
         "Content-Type": "application/json",
@@ -192,6 +120,8 @@ export async function onRequestPost(context) {
       status: 200,
     });
   } catch (error) {
+    // 重置 service_role key
+    resetServiceRoleKey();
     console.error("更新 API 配置失败:", error);
     return new Response(
       JSON.stringify({

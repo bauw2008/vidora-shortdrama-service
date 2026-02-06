@@ -1,4 +1,6 @@
 // Supabase REST API helpers
+let serviceRoleKey = null;
+
 function getHeaders(supabaseKey) {
   return {
     'apikey': supabaseKey,
@@ -26,10 +28,11 @@ async function select(supabaseUrl, supabaseKey, table, options = {}) {
   return single ? (data[0] || null) : data;
 }
 
-async function insert(supabaseUrl, supabaseKey, table, data) {
+async function insert(supabaseUrl, supabaseKey, table, data, useServiceRole = false) {
+  const key = serviceRoleKey || supabaseKey;
   const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
     method: 'POST',
-    headers: getHeaders(supabaseKey),
+    headers: getHeaders(key),
     body: JSON.stringify(data)
   });
 
@@ -47,7 +50,8 @@ async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = ''
   console.log("DEBUG [supabaseUpdate]: URL =", url);
   console.log("DEBUG [supabaseUpdate]: data =", data);
 
-  const headers = getHeaders(supabaseKey);
+  const key = serviceRoleKey || supabaseKey;
+  const headers = getHeaders(key);
   headers['Prefer'] = 'return=representation';
 
   const response = await fetch(url, {
@@ -178,6 +182,9 @@ export async function onRequestPost(context) {
       status: 401,
     });
   }
+
+  // 设置 service_role key 用于写入操作
+  serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   try {
     const body = await context.request.json();

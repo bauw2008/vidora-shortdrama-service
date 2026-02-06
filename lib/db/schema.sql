@@ -358,43 +358,43 @@ CREATE POLICY "Public read api_logs" ON api_logs
 CREATE POLICY "Public read category_version" ON category_version
   FOR SELECT USING (true);
 
--- 写入策略（需要通过 API Key 验证，这里暂时允许所有写入，实际应用中应该更严格）
--- 注意：使用 USING (true) 允许所有认证用户写入，权限控制在应用层通过 API Key 验证实现
-CREATE POLICY "Service write categories" ON categories
-  FOR ALL USING (true);
+-- 写入策略（需要通过 API Key 验证，并使用 service_role 检查）
+-- 注意：使用 auth.role() = 'service_role' 确保只有使用 service_role key 的写入操作才被允许
+CREATE POLICY "Admin write categories" ON categories
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write sub_categories" ON sub_categories
-  FOR ALL USING (true);
+CREATE POLICY "Admin write sub_categories" ON sub_categories
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write videos" ON videos
-  FOR ALL USING (true);
+CREATE POLICY "Admin write videos" ON videos
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write sync_status" ON sync_status
-  FOR ALL USING (true);
+CREATE POLICY "Admin write sync_status" ON sync_status
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write api_sources" ON api_sources
-  FOR ALL USING (true);
+CREATE POLICY "Admin write api_sources" ON api_sources
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write sync_schedules" ON sync_schedules
-  FOR ALL USING (true);
+CREATE POLICY "Admin write sync_schedules" ON sync_schedules
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write api_field_config" ON api_field_config
-  FOR ALL USING (true);
+CREATE POLICY "Admin write api_field_config" ON api_field_config
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write api_config" ON api_config
-  FOR ALL USING (true);
+CREATE POLICY "Admin write api_config" ON api_config
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write api_rate_limits" ON api_rate_limits
-  FOR ALL USING (true);
+CREATE POLICY "Admin write api_rate_limits" ON api_rate_limits
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write ip_blacklist" ON ip_blacklist
-  FOR ALL USING (true);
+CREATE POLICY "Admin write ip_blacklist" ON ip_blacklist
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write api_logs" ON api_logs
-  FOR ALL USING (true);
+CREATE POLICY "Admin write api_logs" ON api_logs
+  FOR ALL USING (auth.role() = 'service_role');
 
-CREATE POLICY "Service write category_version" ON category_version
-  FOR ALL USING (true);
+CREATE POLICY "Admin write category_version" ON category_version
+  FOR ALL USING (auth.role() = 'service_role');
 
 -- ============================================
 -- 触发器：自动更新 updated_at

@@ -1,47 +1,15 @@
-// Supabase REST API helpers
+// Supabase REST API helpers (from shared)
+import {
+  select,
+  verifyAdminApiKey
+} from "./shared/helpers.js";
+
 function getHeaders(supabaseKey) {
   return {
     'apikey': supabaseKey,
     'Authorization': `Bearer ${supabaseKey}`,
     'Content-Type': 'application/json'
   };
-}
-
-async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', single = false } = options;
-  let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
-
-  if (filter) url += `&${filter}`;
-  if (orderBy) url += `&order=${orderBy}`;
-  if (limit) url += `&limit=${limit}`;
-  if (single) url += '&limit=1';
-
-  const response = await fetch(url, { headers: getHeaders(supabaseKey) });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return single ? (data[0] || null) : data;
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    return token === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
 }
 
 export async function onRequestGet(context) {

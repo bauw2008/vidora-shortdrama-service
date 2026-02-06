@@ -43,10 +43,39 @@ edgeone login
 3. 添加以下变量：
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://fmuuefnplextwaufhawh.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtdXVlZm5wbGV4dHdhdWZoYXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwODg4MzMsImV4cCI6MjA4NTY2NDgzM30.BlEg3gCSNzPC_6B9DtZIUkDcmIR1t7Q_CqwtuGbkYcE
+# Supabase 数据库配置
+SUPABASE_URL=https://fmuuefnplextwaufhawh.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtdXVlZm5wbGV4dHdhdWZoYXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwODg4MzMsImV4cCI6MjA4NTY2NDgzM30.BlEg3gCSNzPC_6B9DtZIUkDcmIR1t7Q_CqwtuGbkYcE
+SUPABASE_SERVICE_ROLE_KEY=你的service_role_key  # ⚠️ 必须添加，用于数据库写入操作
+
+# 管理员认证
 ADMIN_API_KEY=3UF2hnRMXeNDABKhwYK4
+
+# 管理员登录凭证（仅用于首次登录）
+ADMIN_USERNAME=bauw
+ADMIN_PASSWORD=bauw123654
+
+# EdgeOne API Token（用于部署）
+EDGEONE_API_TOKEN=Uau+lhGqijFIR/tPES4i68nx1ZHfz8F9kNgN2gP++Zk=
 ```
+
+### 环境变量说明
+
+| 变量名 | 用途 | 是否必需 | 安全级别 |
+|--------|------|----------|----------|
+| `SUPABASE_URL` | Supabase 项目 URL | 必需 | 公开 |
+| `SUPABASE_ANON_KEY` | Supabase 匿名访问密钥 | 必需 | 公开 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服务角色密钥，用于绕过 RLS 进行数据库写入操作 | **必需** | **高度敏感** |
+| `ADMIN_API_KEY` | 管理后台 API 认证密钥 | 必需 | 敏感 |
+| `ADMIN_USERNAME` | 管理员用户名 | 可选 | 敏感 |
+| `ADMIN_PASSWORD` | 管理员密码 | 可选 | 敏感 |
+| `EDGEONE_API_TOKEN` | EdgeOne 部署令牌 | 可选 | 敏感 |
+
+⚠️ **重要安全提示**：
+- `SUPABASE_SERVICE_ROLE_KEY` 拥有绕过 RLS 的完全权限，**只能在服务器端使用**
+- 绝不要在前端代码中暴露 `SUPABASE_SERVICE_ROLE_KEY`
+- 该密钥需要在 Supabase Dashboard 的 Settings -> API 中获取
+- 定期轮换密钥以提高安全性
 
 ## 本地开发
 

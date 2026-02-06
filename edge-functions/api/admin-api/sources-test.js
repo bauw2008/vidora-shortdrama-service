@@ -1,29 +1,7 @@
-// Supabase REST API helpers
-function getHeaders(supabaseKey) {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    return token === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
-}
+// Supabase REST API helpers (from shared)
+import {
+  verifyAdminApiKey
+} from "./shared/helpers.js";
 
 export async function onRequestPost(context) {
   const { env, request } = context;

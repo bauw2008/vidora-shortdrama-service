@@ -1,79 +1,12 @@
-// Supabase REST API helpers (lightweight)
-function getHeaders(supabaseKey) {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', offset = '', single = false } = options;
-  let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
-
-  if (filter) url += `&${filter}`;
-  if (orderBy) url += `&order=${orderBy}`;
-  if (limit) url += `&limit=${limit}`;
-  if (offset) url += `&offset=${offset}`;
-  if (single) url += '&limit=1';
-
-  const response = await fetch(url, { headers: getHeaders(supabaseKey) });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase error: ${response.status} - ${text}`);
-  }
-
-  const data = await response.json();
-  return single ? (data[0] || null) : data;
-}
-
-async function insert(supabaseUrl, supabaseKey, table, data) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: getHeaders(supabaseKey),
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase error: ${response.status} - ${text}`);
-  }
-
-  return response.json();
-}
-
-async function remove(supabaseUrl, supabaseKey, table, filter) {
-  const url = `${supabaseUrl}/rest/v1/${table}?${filter}`;
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: getHeaders(supabaseKey)
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase error: ${response.status} - ${text}`);
-  }
-
-  return response.json();
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    return authHeader.substring(7) === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
-}
+// Supabase REST API helpers (from shared)
+import {
+  select,
+  insert,
+  remove,
+  setServiceRoleKey,
+  resetServiceRoleKey,
+  verifyAdminApiKey
+} from "./shared/helpers.js";
 
 export async function onRequestPost(context) {
   const { env } = context;
@@ -95,6 +28,9 @@ export async function onRequestPost(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const formData = await context.request.formData();
     const file = formData.get("file");
@@ -102,6 +38,7 @@ export async function onRequestPost(context) {
     const clearBeforeRestore = formData.get("clearBeforeRestore") === "true";
 
     if (!file) {
+      resetServiceRoleKey();
       return new Response(JSON.stringify({ success: false, error: "缺少文件" }), {
         headers: { "Content-Type": "application/json" },
         status: 400,
@@ -122,6 +59,7 @@ export async function onRequestPost(context) {
       const data = Array.isArray(backupData.data) ? backupData.data : [];
 
       if (data.length === 0) {
+        resetServiceRoleKey();
         return new Response(JSON.stringify({ success: true, message: "没有数据需要恢复" }), {
           headers: { "Content-Type": "application/json" },
           status: 200,
@@ -152,6 +90,8 @@ export async function onRequestPost(context) {
       }
 
       results.tables[tableName] = { inserted, failed, total: data.length };
+
+      resetServiceRoleKey();
 
       return new Response(
         JSON.stringify({
@@ -215,6 +155,8 @@ export async function onRequestPost(context) {
         results.tables[tableName] = { inserted, failed, total: data.length };
       }
 
+      resetServiceRoleKey();
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -232,11 +174,13 @@ export async function onRequestPost(context) {
       );
     }
 
+    resetServiceRoleKey();
     return new Response(JSON.stringify({ success: false, error: "无效的备份文件格式" }), {
       headers: { "Content-Type": "application/json" },
       status: 400,
     });
   } catch (error) {
+    resetServiceRoleKey();
     console.error("恢复失败:", error);
     return new Response(
       JSON.stringify({

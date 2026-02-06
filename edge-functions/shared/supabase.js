@@ -1,12 +1,21 @@
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function getHeaders() {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
+function getHeaders(useServiceRole = false) {
+  const key = useServiceRole ? supabaseServiceRoleKey : supabaseKey;
+  const headers = {
+    'apikey': key,
+    'Authorization': `Bearer ${key}`,
     'Content-Type': 'application/json'
   };
+  
+  // 使用 service_role 时添加自定义 header 供 RLS 策略检查
+  if (useServiceRole) {
+    headers['X-Custom-Role'] = 'admin';
+  }
+  
+  return headers;
 }
 
 export async function select(table, options = {}) {

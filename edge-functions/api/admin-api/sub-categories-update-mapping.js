@@ -1,53 +1,10 @@
-// Supabase REST API helpers
-function getHeaders(supabaseKey) {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = '') {
-  let url = `${supabaseUrl}/rest/v1/${table}`;
-  if (filter) url += `?${filter}`;
-
-  const headers = getHeaders(supabaseKey);
-  headers['Prefer'] = 'return=representation';
-
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  const text = await response.text();
-  if (!text) {
-    return null;
-  }
-  return JSON.parse(text);
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    return token === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
-}
+// Supabase REST API helpers (from shared)
+import {
+  supabaseUpdate,
+  setServiceRoleKey,
+  resetServiceRoleKey,
+  verifyAdminApiKey
+} from "./shared/helpers.js";
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -62,11 +19,15 @@ export async function onRequestPost(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const body = await request.json();
     const { subCategoryId, categoryId } = body;
 
     if (!subCategoryId) {
+      resetServiceRoleKey();
       return new Response(
         JSON.stringify({ success: false, error: "缺少 subCategoryId 参数" }),
         {
@@ -86,6 +47,8 @@ export async function onRequestPost(context) {
       `id=eq.${subCategoryId}`
     );
 
+    resetServiceRoleKey();
+
     return new Response(
       JSON.stringify({ success: true, data: data || { subCategoryId, categoryId } }),
       {
@@ -94,6 +57,7 @@ export async function onRequestPost(context) {
       },
     );
   } catch (error) {
+    resetServiceRoleKey();
     return new Response(
       JSON.stringify({
         success: false,

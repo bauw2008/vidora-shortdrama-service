@@ -1,64 +1,29 @@
-// Supabase REST API helpers (lightweight)
-function getHeaders(supabaseKey) {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
-  };
-}
+// Supabase REST API helpers (from shared)
+import {
+  select,
+  selectCount,
+  setServiceRoleKey,
+  resetServiceRoleKey,
+  verifyAdminApiKey
+} from "./shared/helpers.js";
 
-async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', offset = '', single = false } = options;
-  let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
-
-  if (filter) url += `&${filter}`;
-  if (orderBy) url += `&order=${orderBy}`;
-  if (limit) url += `&limit=${limit}`;
-  if (offset) url += `&offset=${offset}`;
-  if (single) url += '&limit=1';
-
-  const response = await fetch(url, { headers: getHeaders(supabaseKey) });
+async function deleteLogs(supabaseUrl, supabaseKey, filter) {
+  const url = `${supabaseUrl}/rest/v1/api_logs?${filter}`;
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json'
+    }
+  });
 
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Supabase error: ${response.status} - ${text}`);
   }
 
-  const data = await response.json();
-  return single ? (data[0] || null) : data;
-}
-
-async function selectCount(supabaseUrl, supabaseKey, table, filter = '') {
-  let url = `${supabaseUrl}/rest/v1/${table}?select=id`;
-  if (filter) url += `&${filter}`;
-
-  const response = await fetch(url, {
-    headers: getHeaders(supabaseKey)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return Array.isArray(data) ? data.length : 0;
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    return authHeader.substring(7) === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
+  return response.json();
 }
 
 export async function onRequestGet(context) {
@@ -177,6 +142,9 @@ export async function onRequestDelete(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const url = new URL(context.request.url);
     const autoClean = url.searchParams.get("autoClean") === "true";
@@ -195,11 +163,25 @@ export async function onRequestDelete(context) {
       const now = new Date();
       now.setDate(now.getDate() - thresholdDays);
       const autoCleanDate = now.toISOString();
-      return await deleteLogsBeforeDate(supabaseUrl, supabaseAnonKey, autoCleanDate, "自动清理");
+      const result = await deleteLogs(supabaseUrl, supabaseAnonKey, `request_time=lt.${autoCleanDate}`);
+      resetServiceRoleKey();
+      return new Response(
+        JSON.stringify({ success: true, message: "自动清理成功" }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+          },
+          status: 200,
+        }
+      );
     }
 
     // 手动删除：使用指定的 beforeDate
     if (!beforeDate) {
+      resetServiceRoleKey();
       return new Response(
         JSON.stringify({ success: false, error: "缺少 beforeDate 参数" }),
         {
@@ -209,8 +191,22 @@ export async function onRequestDelete(context) {
       );
     }
 
-    return await deleteLogsBeforeDate(supabaseUrl, supabaseAnonKey, beforeDate, "手动删除");
+    const result = await deleteLogs(supabaseUrl, supabaseAnonKey, `request_time=lt.${beforeDate}`);
+    resetServiceRoleKey();
+    return new Response(
+      JSON.stringify({ success: true, message: "手动删除成功" }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+        },
+        status: 200,
+      }
+    );
   } catch (error) {
+    resetServiceRoleKey();
     console.error("删除日志失败:", error);
     return new Response(
       JSON.stringify({
@@ -224,74 +220,3 @@ export async function onRequestDelete(context) {
     );
   }
 }
-
-async function deleteLogsBeforeDate(supabaseUrl, supabaseAnonKey, beforeDate, deleteType) {
-  const filter = `request_time=lt.${beforeDate}`;
-  console.log(`DEBUG [DELETE api-logs]: ${deleteType} - filter =`, filter);
-  console.log(`DEBUG [DELETE api-logs]: ${deleteType} - URL =`, `${supabaseUrl}/rest/v1/api_logs?${filter}`);
-    
-    const response = await fetch(
-    
-          `${supabaseUrl}/rest/v1/api_logs?${filter}`,
-    
-          {
-    
-            method: 'DELETE',
-    
-            headers: {
-    
-              'apikey': supabaseAnonKey,
-    
-              'Authorization': `Bearer ${supabaseAnonKey}`,
-    
-              'Content-Type': 'application/json'
-    
-            }
-    
-          }
-    
-        );
-    
-    
-    
-        console.log(`DEBUG [DELETE api-logs]: ${deleteType} - response.status =`, response.status);
-    
-    
-    
-        if (!response.ok) {
-    
-          const text = await response.text();
-    
-          console.log(`DEBUG [DELETE api-logs]: ${deleteType} - error text =`, text);
-    
-          throw new Error(`删除失败: ${response.status} - ${text}`);
-    
-        }
-    
-    
-    
-        return new Response(
-    
-          JSON.stringify({ success: true, message: `${deleteType}成功` }),
-    
-          {
-    
-            headers: {
-    
-              "Content-Type": "application/json",
-    
-              "Access-Control-Allow-Origin": "*",
-    
-              "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    
-              "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
-    
-            },
-    
-            status: 200,
-    
-          },
-    
-        );
-    
-    }

@@ -1,65 +1,11 @@
-// Supabase REST API helpers
-function getHeaders(supabaseKey) {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', single = false } = options;
-  let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
-
-  if (filter) url += `&${filter}`;
-  if (orderBy) url += `&order=${orderBy}`;
-  if (limit) url += `&limit=${limit}`;
-  if (single) url += '&limit=1';
-
-  const response = await fetch(url, { headers: getHeaders(supabaseKey) });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return single ? (data[0] || null) : data;
-}
-
-async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = '') {
-  let url = `${supabaseUrl}/rest/v1/${table}`;
-  if (filter) url += `?${filter}`;
-
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers: getHeaders(supabaseKey),
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    return token === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
-}
+// Supabase REST API helpers (from shared)
+import {
+  select,
+  supabaseUpdate,
+  setServiceRoleKey,
+  resetServiceRoleKey,
+  verifyAdminApiKey
+} from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
   const { env } = context;
@@ -115,11 +61,15 @@ export async function onRequestPut(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const body = await request.json();
     const { version } = body;
 
     if (typeof version !== 'number' || version < 1) {
+      resetServiceRoleKey();
       return new Response(
         JSON.stringify({ success: false, error: "版本号必须是大于等于 1 的整数" }),
         {
@@ -131,6 +81,8 @@ export async function onRequestPut(context) {
 
     const data = await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version }, "id=eq.1");
 
+    resetServiceRoleKey();
+
     return new Response(
       JSON.stringify({ success: true, data }),
       {
@@ -139,6 +91,7 @@ export async function onRequestPut(context) {
       },
     );
   } catch (error) {
+    resetServiceRoleKey();
     return new Response(
       JSON.stringify({
         success: false,

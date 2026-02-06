@@ -1,93 +1,13 @@
-// Supabase REST API helpers
-function getHeaders(supabaseKey) {
-  return {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-async function select(supabaseUrl, supabaseKey, table, options = {}) {
-  const { columns = '*', filter = '', orderBy = '', limit = '', single = false } = options;
-  let url = `${supabaseUrl}/rest/v1/${table}?select=${columns}`;
-
-  if (filter) url += `&${filter}`;
-  if (orderBy) url += `&order=${orderBy}`;
-  if (limit) url += `&limit=${limit}`;
-  if (single) url += '&limit=1';
-
-  const response = await fetch(url, { headers: getHeaders(supabaseKey) });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return single ? (data[0] || null) : data;
-}
-
-async function insert(supabaseUrl, supabaseKey, table, data) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: getHeaders(supabaseKey),
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-async function supabaseUpdate(supabaseUrl, supabaseKey, table, data, filter = '') {
-  let url = `${supabaseUrl}/rest/v1/${table}`;
-  if (filter) url += `?${filter}`;
-
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers: getHeaders(supabaseKey),
-    body: JSON.stringify(data)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-async function remove(supabaseUrl, supabaseKey, table, filter) {
-  const url = `${supabaseUrl}/rest/v1/${table}?${filter}`;
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: getHeaders(supabaseKey)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-function verifyAdminApiKey(context, adminApiKey) {
-  const authHeader = context.request.headers.get("Authorization");
-  const apiKey = context.request.headers.get("X-API-Key");
-
-  if (!adminApiKey) return false;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    return token === adminApiKey;
-  }
-
-  if (apiKey) {
-    return apiKey === adminApiKey;
-  }
-
-  return false;
-}
+// Supabase REST API helpers (from shared)
+import {
+  select,
+  insert,
+  supabaseUpdate,
+  remove,
+  setServiceRoleKey,
+  resetServiceRoleKey,
+  verifyAdminApiKey
+} from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
   const { env } = context;
@@ -141,12 +61,17 @@ export async function onRequestPost(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const body = await request.json();
     const data = await insert(supabaseUrl, supabaseAnonKey, "categories", body);
 
     // 更新全局版本号
     await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version: (await select(supabaseUrl, supabaseAnonKey, "category_version", { orderBy: "id.desc", limit: "1", single: true })).version + 1 }, "id=eq.1");
+
+    resetServiceRoleKey();
 
     return new Response(
       JSON.stringify({ success: true, data }),
@@ -156,6 +81,7 @@ export async function onRequestPost(context) {
       },
     );
   } catch (error) {
+    resetServiceRoleKey();
     return new Response(
       JSON.stringify({
         success: false,
@@ -182,6 +108,9 @@ export async function onRequestPut(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const body = await request.json();
     const { id, ...updateData } = body;
@@ -191,6 +120,8 @@ export async function onRequestPut(context) {
     // 更新全局版本号
     await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version: (await select(supabaseUrl, supabaseAnonKey, "category_version", { orderBy: "id.desc", limit: "1", single: true })).version + 1 }, "id=eq.1");
 
+    resetServiceRoleKey();
+
     return new Response(
       JSON.stringify({ success: true, data }),
       {
@@ -199,6 +130,7 @@ export async function onRequestPut(context) {
       },
     );
   } catch (error) {
+    resetServiceRoleKey();
     return new Response(
       JSON.stringify({
         success: false,
@@ -225,6 +157,9 @@ export async function onRequestDelete(context) {
     });
   }
 
+  // 设置 service_role key 用于写入操作
+  setServiceRoleKey(env.SUPABASE_SERVICE_ROLE_KEY);
+
   try {
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
@@ -234,6 +169,8 @@ export async function onRequestDelete(context) {
     // 更新全局版本号
     await supabaseUpdate(supabaseUrl, supabaseAnonKey, "category_version", { version: (await select(supabaseUrl, supabaseAnonKey, "category_version", { orderBy: "id.desc", limit: "1", single: true })).version + 1 }, "id=eq.1");
 
+    resetServiceRoleKey();
+
     return new Response(
       JSON.stringify({ success: true, message: "分类已删除" }),
       {
@@ -242,6 +179,7 @@ export async function onRequestDelete(context) {
       },
     );
   } catch (error) {
+    resetServiceRoleKey();
     return new Response(
       JSON.stringify({
         success: false,
