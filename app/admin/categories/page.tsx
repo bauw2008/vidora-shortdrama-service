@@ -41,10 +41,17 @@ export default function CategoriesPage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem("admin_token");
       const [catRes, subRes, versionRes] = await Promise.all([
-        fetch("/api/admin-api/categories"),
-        fetch("/api/admin-api/sub-categories"),
-        fetch("/api/admin-api/category-version"),
+        fetch("/api/admin-api/categories", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/admin-api/sub-categories", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/admin-api/category-version", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       if (catRes.ok && subRes.ok) {
@@ -76,8 +83,13 @@ export default function CategoriesPage() {
     }
 
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/category-version", {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ version: versionNum }),
       });
 
@@ -96,8 +108,13 @@ export default function CategoriesPage() {
 
   const handleCreateCategory = async () => {
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/categories", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(formData),
       });
 
@@ -117,13 +134,21 @@ export default function CategoriesPage() {
     if (!editingCategory) return;
 
     try {
-      const res = await fetch("/api/admin-api/categories", {
-        method: "PUT",
-        body: JSON.stringify({
-          id: editingCategory.id,
-          ...formData,
-        }),
-      });
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch(
+        `/api/admin-api/categories?id=${editingCategory.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id: editingCategory.id,
+            ...formData,
+          }),
+        },
+      );
 
       if (res.ok) {
         setEditingCategory(null);
@@ -141,8 +166,10 @@ export default function CategoriesPage() {
     if (!confirm("确定要删除这个分类吗？")) return;
 
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch(`/api/admin-api/categories?id=${id}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
@@ -160,8 +187,13 @@ export default function CategoriesPage() {
     categoryId: number,
   ) => {
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/sub-categories-update-mapping", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ subCategoryId, categoryId }),
       });
 
@@ -187,9 +219,12 @@ export default function CategoriesPage() {
     }
 
     try {
-      // 先预览将要更新的视频
+      const token = localStorage.getItem("admin_token");
       const previewRes = await fetch(
         `/api/admin-api/preview-batch-update-category?categoryId=${selectedCategoryId}&subCategoryIds=${selectedSubCategoryIds.join(",")}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
 
       if (!previewRes.ok) {
@@ -222,6 +257,10 @@ export default function CategoriesPage() {
       // 执行批量更新
       const res = await fetch("/api/admin-api/videos/batch-update-category", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           categoryId: selectedCategoryId,
           subCategoryIds: selectedSubCategoryIds,

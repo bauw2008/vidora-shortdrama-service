@@ -23,7 +23,10 @@ export default function SourcesPage() {
 
   const fetchSources = async () => {
     try {
-      const res = await fetch("/api/admin-api/sources");
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch("/api/admin-api/sources", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (res.ok) {
         const data = await res.json();
@@ -39,8 +42,13 @@ export default function SourcesPage() {
   const handleTestSource = async (url: string, id: string) => {
     setTesting(id);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/sources-test", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ url }),
       });
 

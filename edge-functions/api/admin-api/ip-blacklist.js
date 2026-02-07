@@ -1,4 +1,4 @@
-// Supabase REST API helpers (from shared)
+﻿// Supabase REST API helpers (from shared)
 import {
   select,
   selectCount,
@@ -10,7 +10,8 @@ import {
 } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {
-  const { env, request } = context;
+  const { request } = context;
+  const { env } = context;
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;
@@ -70,7 +71,8 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const { env, request } = context;
+  const { request } = context;
+  const { env } = context;
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;
@@ -116,7 +118,8 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestDelete(context) {
-  const { env, request } = context;
+  const { request } = context;
+  const { env } = context;
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;

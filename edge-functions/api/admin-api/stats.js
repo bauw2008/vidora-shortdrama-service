@@ -1,4 +1,4 @@
-// Supabase REST API helpers (from shared)
+﻿// Supabase REST API helpers (from shared)
 import { rpc, verifyAdminApiKey } from "./shared/helpers.js";
 
 export async function onRequestGet(context) {

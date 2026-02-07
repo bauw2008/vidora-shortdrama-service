@@ -65,7 +65,10 @@ export default function ApiLogsPage() {
         ),
       });
 
-      const res = await fetch(`/api/admin-api/api-logs?${params}`);
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch(`/api/admin-api/api-logs?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (res.ok) {
         const data = await res.json();
@@ -132,15 +135,24 @@ export default function ApiLogsPage() {
 
     setDeleting(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({ beforeDate: beforeDateStr });
 
       const res = await fetch(`/api/admin-api/api-logs?${params}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
-        const data = await res.json();
-        alert(`日志清理完成`);
+        // DELETE 请求可能返回 204，没有响应体
+        let message = "清理成功";
+        try {
+          const data = await res.json();
+          if (data.message) message = data.message;
+        } catch (e) {
+          // 忽略 JSON 解析错误
+        }
+        alert(message);
         fetchLogs();
       } else {
         const data = await res.json();
@@ -168,10 +180,12 @@ export default function ApiLogsPage() {
 
     setDeleting(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const params = new URLSearchParams({ autoClean: "true" });
 
       const res = await fetch(`/api/admin-api/api-logs?${params}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {

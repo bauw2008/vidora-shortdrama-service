@@ -671,7 +671,7 @@ export async function onRequestGet(context) {
         is_rate_limit_warning: false,
         request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone),
       };
-      logApiCall(supabaseUrl, supabaseAnonKey, logData).catch(() => {});
+      logApiCall(supabaseUrl, env.SUPABASE_ANON_KEY, logData).catch(() => {});
     });
 
     return new Response(
@@ -720,7 +720,7 @@ export async function onRequestGet(context) {
         is_rate_limit_warning: false,
         request_time: getCurrentTimeInTimezone(timezoneConfig?.timezone),
       };
-      logApiCall(supabaseUrl, supabaseAnonKey, logData).catch(() => {});
+      logApiCall(supabaseUrl, env.SUPABASE_ANON_KEY, logData).catch(() => {});
     });
 
     return new Response(JSON.stringify({ success: false, error: errorMsg }), {

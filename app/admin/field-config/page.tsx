@@ -28,8 +28,12 @@ export default function FieldConfigPage() {
   const fetchConfigs = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch(
         `/api/admin-api/field-config?apiEndpoint=${apiEndpoint}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
       const data = await res.json();
       if (data.success) {
@@ -57,8 +61,13 @@ export default function FieldConfigPage() {
     );
 
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/field-config", {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id,
           [field]: newValue,
@@ -85,8 +94,13 @@ export default function FieldConfigPage() {
   const handleOrderChange = async (id: number, newOrder: number) => {
     setSaving(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/field-config", {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id,
           display_order: newOrder,
@@ -125,8 +139,13 @@ export default function FieldConfigPage() {
 
     // 保存到服务器
     try {
+      const token = localStorage.getItem("admin_token");
       await fetch("/api/admin-api/field-config", {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id: newConfigs[index].id,
           display_order: newConfigs[index].display_order,
@@ -134,6 +153,10 @@ export default function FieldConfigPage() {
       });
       await fetch("/api/admin-api/field-config", {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id: newConfigs[targetIndex].id,
           display_order: newConfigs[targetIndex].display_order,

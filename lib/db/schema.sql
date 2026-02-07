@@ -352,6 +352,16 @@ CREATE POLICY "Admin write ip_blacklist" ON ip_blacklist
 CREATE POLICY "Admin write api_logs" ON api_logs
   FOR ALL USING (auth.role() = 'service_role');
 
+-- 允许匿名写入日志（只允许插入，不允许修改和删除）
+CREATE POLICY "Public insert api_logs" ON api_logs
+  FOR INSERT WITH CHECK (
+    -- 只允许插入基本字段，不允许修改敏感字段
+    ip_address IS NOT NULL AND
+    api_endpoint IS NOT NULL AND
+    http_method IS NOT NULL AND
+    request_time IS NOT NULL
+  );
+
 CREATE POLICY "Admin write category_version" ON category_version
   FOR ALL USING (auth.role() = 'service_role');
 

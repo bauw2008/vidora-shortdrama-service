@@ -1,4 +1,5 @@
-// Supabase REST API helpers
+﻿// Supabase REST API helpers
+
 function getHeaders(supabaseKey) {
   return {
     apikey: supabaseKey,
@@ -26,7 +27,8 @@ function verifyAdminApiKey(context, adminApiKey) {
 }
 
 export async function onRequestPost(context) {
-  const { env, request } = context;
+  const { request } = context;
+  const { env } = context;
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;

@@ -1,5 +1,7 @@
-export async function onRequestPost(context) {
-  const { request, env } = context;
+﻿export async function onRequestPost(context) {
+  const { request } = context;
+
+  const { env } = context;
 
   const adminUsername = env.ADMIN_USERNAME;
   const adminPassword = env.ADMIN_PASSWORD;

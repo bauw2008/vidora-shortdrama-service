@@ -141,7 +141,10 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
         table: table,
       });
 
-      const res = await fetch(`/api/admin-api/backup?${params}`);
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch(`/api/admin-api/backup?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (res.ok) {
         const blob = await res.blob();
@@ -198,8 +201,10 @@ export default function BackupRestorePage({}: BackupRestorePageProps) {
         formData.append("clearBeforeRestore", "true");
       }
 
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/restore", {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 

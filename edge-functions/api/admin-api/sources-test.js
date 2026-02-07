@@ -1,8 +1,9 @@
-// Supabase REST API helpers (from shared)
+﻿// Supabase REST API helpers (from shared)
 import { verifyAdminApiKey } from "./shared/helpers.js";
 
 export async function onRequestPost(context) {
-  const { env, request } = context;
+  const { request } = context;
+  const { env } = context;
   const adminApiKey = env.ADMIN_API_KEY;
 
   console.log("DEBUG [sources-test POST]: env.ADMIN_API_KEY =", adminApiKey);

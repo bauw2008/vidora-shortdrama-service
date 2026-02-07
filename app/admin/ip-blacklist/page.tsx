@@ -33,8 +33,12 @@ export default function IpBlacklistPage() {
   const fetchEntries = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch(
         `/api/admin-api/ip-blacklist?page=${pagination.page}&pageSize=${pagination.pageSize}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
 
       if (res.ok) {
@@ -57,8 +61,13 @@ export default function IpBlacklistPage() {
 
     setAdding(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/ip-blacklist", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ ip_address: newIp, reason: newReason }),
       });
 
@@ -85,9 +94,14 @@ export default function IpBlacklistPage() {
 
     setDeleting(Date.now());
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/ip-blacklist", {
         method: "DELETE",
-        body: JSON.stringify({ ip_address: ip }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: deleting }),
       });
 
       if (res.ok) {
@@ -98,8 +112,8 @@ export default function IpBlacklistPage() {
         alert(`移除失败: ${data.error}`);
       }
     } catch (error) {
-      console.error("移除失败:", error);
-      alert("移除失败");
+      console.error("删除失败:", error);
+      alert("删除失败");
     } finally {
       setDeleting(null);
     }

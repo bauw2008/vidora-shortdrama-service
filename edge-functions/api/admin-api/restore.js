@@ -1,4 +1,4 @@
-// Supabase REST API helpers (from shared)
+﻿// Supabase REST API helpers (from shared)
 import {
   select,
   insert,

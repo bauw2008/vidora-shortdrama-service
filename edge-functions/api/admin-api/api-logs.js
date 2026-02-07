@@ -1,4 +1,4 @@
-// Supabase REST API helpers (from shared)
+﻿// Supabase REST API helpers (from shared)
 import {
   select,
   selectCount,
@@ -21,6 +21,11 @@ async function deleteLogs(supabaseUrl, supabaseKey, filter) {
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Supabase error: ${response.status} - ${text}`);
+  }
+
+  // 204 状态码表示成功但没有返回数据
+  if (response.status === 204) {
+    return null;
   }
 
   return response.json();
@@ -67,7 +72,7 @@ export async function onRequestGet(context) {
     if (endpointFilter) filter += `&api_endpoint=eq.${endpointFilter}`;
     if (statusFilter) filter += `&response_status=eq.${statusFilter}`;
 
-    const [data, total, configData] = await Promise.all([
+    const [data, configData] = await Promise.all([
       select(supabaseUrl, supabaseAnonKey, "api_logs", {
         columns: "*",
         filter: filter.substring(1),
@@ -75,35 +80,47 @@ export async function onRequestGet(context) {
         limit: pageSize.toString(),
         offset: from.toString(),
       }),
-      selectCount(
-        supabaseUrl,
-        supabaseAnonKey,
-        "api_logs",
-        filter.substring(1),
-      ),
       select(supabaseUrl, supabaseAnonKey, "api_config", {
-        columns: "auto_clean_threshold,max_log_count",
+        columns: "auto_clean_threshold,max_log_count,timezone",
         orderBy: "id.asc",
         limit: "1",
         single: true,
       }),
     ]);
 
+    const total = Array.isArray(data) ? data.length : 0;
+
+    // 如果不是最后一页，尝试获取实际总数
+    let actualTotal = total;
+    if (data.length === pageSize) {
+      try {
+        const allData = await select(supabaseUrl, supabaseAnonKey, "api_logs", {
+          columns: "id",
+          filter: filter.substring(1),
+          orderBy: "request_time.desc",
+        });
+        actualTotal = Array.isArray(allData) ? allData.length : 0;
+      } catch (e) {
+        console.log("获取总数失败，使用返回数量:", e);
+      }
+    }
+
     const config = configData || {
       auto_clean_threshold: 80000,
       max_log_count: 100000,
+      timezone: "Asia/Shanghai",
     };
 
     // 计算统计信息
-    const estimatedSizeMB = ((total * 500) / 1024 / 1024).toFixed(2); // 假设每条日志约500字节
+    const estimatedSizeMB = ((actualTotal * 500) / 1024 / 1024).toFixed(2); // 假设每条日志约500字节
 
     const stats = {
-      totalCount: total,
+      totalCount: actualTotal,
       estimatedSizeMB: estimatedSizeMB,
       maxLogCount: config.max_log_count,
       autoCleanThreshold: config.auto_clean_threshold,
       autoCleanDays: Math.floor(config.auto_clean_threshold / 10000), // 假设每天10000条
-      timezone: "Asia/Shanghai",
+      timezone: config.timezone,
     };
 
     return new Response(
@@ -113,8 +130,8 @@ export async function onRequestGet(context) {
         pagination: {
           page,
           pageSize,
-          total,
-          totalPages: Math.ceil(total / pageSize),
+          total: actualTotal,
+          totalPages: Math.ceil(actualTotal / pageSize),
         },
         stats,
       }),
@@ -172,7 +189,7 @@ export async function onRequestDelete(context) {
         supabaseAnonKey,
         "api_config",
         {
-          columns: "auto_clean_threshold",
+          columns: "auto_clean_threshold,timezone",
           orderBy: "id.asc",
           limit: "1",
           single: true,
@@ -182,9 +199,17 @@ export async function onRequestDelete(context) {
       const thresholdDays = Math.floor(
         (configData?.auto_clean_threshold || 80000) / 10000,
       );
+      const timezone = configData?.timezone || "Asia/Shanghai";
+
+      // 使用配置的时区创建日期
       const now = new Date();
-      now.setDate(now.getDate() - thresholdDays);
-      const autoCleanDate = now.toISOString();
+      const options = { timeZone: timezone };
+      const formatter = new Intl.DateTimeFormat("en-CA", options); // en-CA 格式：YYYY-MM-DD
+      const cleanDate = new Date(
+        now.getTime() - thresholdDays * 24 * 60 * 60 * 1000,
+      );
+      const autoCleanDate = formatter.format(cleanDate);
+
       const result = await deleteLogs(
         supabaseUrl,
         supabaseAnonKey,
@@ -192,7 +217,11 @@ export async function onRequestDelete(context) {
       );
       resetServiceRoleKey();
       return new Response(
-        JSON.stringify({ success: true, message: "自动清理成功" }),
+        JSON.stringify({
+          success: true,
+          message: "自动清理成功",
+          date: autoCleanDate,
+        }),
         {
           headers: {
             "Content-Type": "application/json",
@@ -218,10 +247,29 @@ export async function onRequestDelete(context) {
       );
     }
 
+    // 获取配置的时区
+    const configData = await select(
+      supabaseUrl,
+      supabaseAnonKey,
+      "api_config",
+      {
+        columns: "timezone",
+        orderBy: "id.asc",
+        limit: "1",
+        single: true,
+      },
+    );
+    const timezone = configData?.timezone || "Asia/Shanghai";
+
+    // 使用配置的时区转换日期格式
+    const options = { timeZone: timezone };
+    const formatter = new Intl.DateTimeFormat("en-CA", options);
+    const formattedDate = formatter.format(new Date(beforeDate));
+
     const result = await deleteLogs(
       supabaseUrl,
       supabaseAnonKey,
-      `request_time=lt.${beforeDate}`,
+      `request_time=lt.${formattedDate}`,
     );
     resetServiceRoleKey();
     return new Response(

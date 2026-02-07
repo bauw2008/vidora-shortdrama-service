@@ -28,7 +28,10 @@ export default function ApiConfigPage() {
   const fetchConfig = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin-api/api-config");
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch("/api/admin-api/api-config", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (res.ok) {
         const data = await res.json();
@@ -44,8 +47,13 @@ export default function ApiConfigPage() {
   const handleUpdateApiKey = async () => {
     setSaving(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ api_key: newApiKey }),
       });
 
@@ -73,8 +81,13 @@ export default function ApiConfigPage() {
 
     setSaving(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ generateApiKey: true }),
       });
 
@@ -129,8 +142,13 @@ API Key: ${data.data.api_key}
 
     setSaving(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ auth_enabled: newStatus }),
       });
 
@@ -152,8 +170,13 @@ API Key: ${data.data.api_key}
   const handleUpdateRateLimit = async () => {
     setRateLimitSaving(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           rate_limit_minute: config.rate_limit_minute,
           rate_limit_hourly: config.rate_limit_hourly,
@@ -177,8 +200,13 @@ API Key: ${data.data.api_key}
 
   const handleUpdateTimezone = async () => {
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ timezone: config.timezone }),
       });
 
@@ -198,8 +226,13 @@ API Key: ${data.data.api_key}
   const handleUpdateLogConfig = async () => {
     setRateLimitSaving(true);
     try {
+      const token = localStorage.getItem("admin_token");
       const res = await fetch("/api/admin-api/api-config", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           auto_clean_threshold: config.auto_clean_threshold,
           max_log_count: config.max_log_count,

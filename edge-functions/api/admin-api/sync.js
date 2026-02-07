@@ -1,4 +1,4 @@
-// Supabase REST API helpers
+﻿// Supabase REST API helpers
 let serviceRoleKey = null;
 
 function getHeaders(supabaseKey) {

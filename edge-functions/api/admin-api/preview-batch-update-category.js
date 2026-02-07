@@ -1,4 +1,4 @@
-// Supabase REST API helpers (from shared)
+﻿// Supabase REST API helpers (from shared)
 import { select, verifyAdminApiKey } from "./shared/helpers.js";
 
 function getHeaders(supabaseKey) {
@@ -10,7 +10,8 @@ function getHeaders(supabaseKey) {
 }
 
 export async function onRequestGet(context) {
-  const { env, request } = context;
+  const { request } = context;
+  const { env } = context;
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseAnonKey = env.SUPABASE_ANON_KEY;
   const adminApiKey = env.ADMIN_API_KEY;
