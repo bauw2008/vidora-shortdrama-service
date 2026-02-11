@@ -207,8 +207,11 @@ export async function getSubCategories(
 export async function getOrCreateSubCategory(
   name: string,
 ): Promise<SubCategory> {
+  // 使用 supabaseAdmin 绕过 RLS 限制
+  const adminClient = supabaseAdmin || supabase;
+
   // 先尝试查询
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existing, error: fetchError } = await adminClient
     .from("sub_categories")
     .select("*")
     .eq("name", name)
@@ -219,7 +222,7 @@ export async function getOrCreateSubCategory(
   }
 
   // 尝试插入
-  const { data, error } = await supabase
+  const { data, error } = await adminClient
     .from("sub_categories")
     .insert({ name })
     .select()
@@ -227,7 +230,7 @@ export async function getOrCreateSubCategory(
 
   // 如果插入失败（可能是并发冲突），再次查询
   if (error) {
-    const { data: retryData, error: retryError } = await supabase
+    const { data: retryData, error: retryError } = await adminClient
       .from("sub_categories")
       .select("*")
       .eq("name", name)

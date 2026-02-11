@@ -28,18 +28,18 @@ jobs:
           echo "========================================"
           CUTOFF_DATETIME=$(date -d '2 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
           echo "清理 $CUTOFF_DATETIME 之前的记录"
-          
-          # 获取 ID 并处理空行情况
-          OLD_RUNS=$(gh run list --limit 200 --json databaseId,status,startedAt \
-            | jq -r '.[] | select(.status == "completed" or .status == "failure" or .status == "cancelled") | select(.startedAt < "'$CUTOFF_DATETIME'") | .databaseId')
-          
+
+          # 获取2天前的所有运行记录 ID（不限状态）
+          OLD_RUNS=$(gh run list --limit 200 --json databaseId,startedAt \
+            | jq -r '.[] | select(.startedAt < "'$CUTOFF_DATETIME'") | .databaseId')
+
           # 统计行数，处理空结果
           if [ -z "$OLD_RUNS" ]; then
             COUNT=0
           else
             COUNT=$(echo "$OLD_RUNS" | wc -l)
           fi
-          
+
           echo "$OLD_RUNS" > /tmp/old_runs.txt
           echo "old_runs_count=$COUNT" >> $GITHUB_OUTPUT
           echo "找到记录数量: $COUNT"
