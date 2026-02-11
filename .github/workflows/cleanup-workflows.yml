@@ -69,7 +69,7 @@ jobs:
           for RUN_ID in $OLD_RUNS; do
             if [ -n "$RUN_ID" ]; then
               echo "删除运行记录: $RUN_ID"
-              gh run delete "$RUN_ID" --yes
+              gh run delete "$RUN_ID"
               COUNT=$((COUNT + 1))
             fi
           done
