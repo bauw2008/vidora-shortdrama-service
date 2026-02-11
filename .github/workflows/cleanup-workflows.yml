@@ -1,11 +1,8 @@
 name: 清理工作流运行记录
 
 on:
-  # 每5天执行一次，上午11点（避开其他同步任务的时间）
   schedule:
-    - cron: '0 11 */5 * *'  # 每5天的11点执行
-
-  # 允许手动触发
+    - cron: '0 11 */5 * *'
   workflow_dispatch:
 
 env:
@@ -15,6 +12,11 @@ jobs:
   cleanup-workflows:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # --- 关键修复：必须添加以下权限配置 ---
+    permissions:
+      actions: write
+      contents: read
+    # ------------------------------------
 
     steps:
       - name: 检出代码
@@ -24,74 +26,42 @@ jobs:
         id: list-runs
         run: |
           echo "========================================"
-          echo "获取工作流运行记录"
-          echo "========================================"
-          
-          # 计算2天前的日期
-          CUTOFF_DATE=$(date -d '2 days ago' -u +%Y-%m-%d)
           CUTOFF_DATETIME=$(date -d '2 days ago' -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "清理 $CUTOFF_DATETIME 之前的记录"
           
-          echo "清理 $CUTOFF_DATE 之前的记录"
-          echo "截止时间: $CUTOFF_DATETIME"
-          echo "========================================"
+          # 获取 ID 并处理空行情况
+          OLD_RUNS=$(gh run list --limit 200 --json databaseId,status,startedAt \
+            | jq -r '.[] | select(.status == "completed" or .status == "failure" or .status == "cancelled") | select(.startedAt < "'$CUTOFF_DATETIME'") | .databaseId')
           
-          # 列出所有工作流运行记录（按时间倒序）
-          gh run list --limit 200 --json databaseId,name,status,createdAt,conclusion,startedAt
+          # 统计行数，处理空结果
+          if [ -z "$OLD_RUNS" ]; then
+            COUNT=0
+          else
+            COUNT=$(echo "$OLD_RUNS" | wc -l)
+          fi
           
-          # 获取需要清理的运行记录（保留最近2天的记录）
-          # 使用 jq 过滤和提取 databaseId
-          OLD_RUNS=$(gh run list --limit 200 --json databaseId,name,status,createdAt,conclusion,startedAt \
-            | jq -r '.[] | 
-               select(.status == "completed" or .status == "failure" or .status == "cancelled") | 
-               select(.startedAt < "'$CUTOFF_DATETIME'") | 
-               .databaseId')
-          
-          echo "========================================"
-          echo "找到需要清理的运行记录数量: $(echo "$OLD_RUNS" | wc -l)"
-          echo "========================================"
-          
-          # 保存到文件供后续步骤使用
           echo "$OLD_RUNS" > /tmp/old_runs.txt
-          
-          echo "old_runs_count=$(echo "$OLD_RUNS" | wc -l)" >> $GITHUB_OUTPUT
+          echo "old_runs_count=$COUNT" >> $GITHUB_OUTPUT
+          echo "找到记录数量: $COUNT"
+          echo "========================================"
 
       - name: 清理旧的工作流运行记录
-        if: steps.list-runs.outputs.old_runs_count > 0
+        if: steps.list-runs.outputs.old_runs_count != '0'
         run: |
-          echo "========================================"
-          echo "开始清理工作流运行记录"
-          echo "========================================"
-          
+          echo "开始清理..."
           OLD_RUNS=$(cat /tmp/old_runs.txt)
           COUNT=0
           
-          # 逐个删除运行记录
           for RUN_ID in $OLD_RUNS; do
             if [ -n "$RUN_ID" ]; then
-              echo "删除运行记录: $RUN_ID"
-              gh run delete "$RUN_ID"
+              echo "正在删除: $RUN_ID"
+              # --- 优化：添加 || true 避免单个失败导致整个 Job 挂掉 ---
+              gh run delete "$RUN_ID" || echo "删除 $RUN_ID 失败，可能已被手动清理"
               COUNT=$((COUNT + 1))
             fi
           done
-          
-          echo "========================================"
-          echo "✅ 已清理 $COUNT 个工作流运行记录"
-          echo "========================================"
-
-      - name: 显示当前工作流运行记录
-        run: |
-          echo "========================================"
-          echo "当前保留的工作流运行记录"
-          echo "========================================"
-          gh run list --limit 20
-          echo "========================================"
+          echo "✅ 已完成 $COUNT 个记录的处理"
 
       - name: 无需清理
-        if: steps.list-runs.outputs.old_runs_count == 0
-        run: |
-          echo "========================================"
-          echo "✅ 没有需要清理的工作流运行记录"
-          echo "========================================"
-          echo "当前保留的运行记录："
-          gh run list --limit 10
-          echo "========================================"
+        if: steps.list-runs.outputs.old_runs_count == '0'
+        run: echo "✅ 没有需要清理的记录"
